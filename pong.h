@@ -7,7 +7,7 @@
 typedef struct message
 {   
     char msg_type;  // 'c' - Connect; 'r' - Release_ball; 's' - Send_ball; 'm' - Move_ball; 'd' - Disconnect
-}essage;
+}message;
 
 /*    
     ball_position_t ball_position;
