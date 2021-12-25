@@ -8,8 +8,8 @@ NOTA/QUESTAO: devido à forma como o "recvfrom" funciona (é preciso especificar
 
 
 compilation and execution: 
- gcc pongserver.c -o server
- gcc pongclient.c -o client
+- gcc pongserver.c -o server
+- gcc pongclient.c -o client
  
  ./server
  ./client
