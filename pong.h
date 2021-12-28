@@ -3,6 +3,7 @@
 
 #define SOCK_ADDRESS "/tmp/sock_16"
 
+//typedef enum command {CONNECT, RELEASE, SEND, MOVE, DISCONNECT} command;
 
 typedef struct message
 {   

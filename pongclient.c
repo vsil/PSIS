@@ -19,26 +19,18 @@ WINDOW * message_win;
 
 int main(){
 
-char buff[100]; 
+	char buff[100]; 
 	int nbytes;
 
-
-	
 	int sock_fd= socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock_fd == -1){
 		perror("socket: ");
 		exit(-1);
 	}
-	//printf(" socket created \n Ready to send\n");
 
 	char recv_message[100];
 
 	char linha[100] = "127.0.0.1";  // this should be given as argument in terminal
-/*
-	printf("What is the network address of the recipient? ");
-	fgets(linha, 100, stdin);
-	linha[strlen(linha)-1] = '\0';
-*/
 
 	struct sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
@@ -48,41 +40,56 @@ char buff[100];
 		exit(-1);
 	}
 
-
 	// send connection message
 	struct message m;
 	m.msg_type = 'c';
 	sendto(sock_fd, &m, sizeof(struct message), 0, 
 			(const struct sockaddr *)&server_addr, sizeof(server_addr));
- 
-	nbytes = recv(sock_fd, recv_message, 100, 0);
-	printf("\n Received connection confirmation: '%s'", recv_message);
+
+	int play_state = 0;
 
 	while(1){
+		system("clear");
+		printf("\n waiting for message \n");
 		
-
 		nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
-			printf("\nmessage received!");
-			if(m.msg_type=='s'){
-				printf("\nEntering play state! \n");
+			printf("\nmessage received! \n");
 
-				char ch;
-				do{
-					printf("what is your character(a..z)?: ");
-					ch = getchar();
-					ch = tolower(ch);  
-				}while(!isalpha(ch));
+		if(m.msg_type=='s'){
+			printf("\nEntering play state! \n");
+			play_state = 1;
+		}
 
-				if(ch=='d'){
-					printf("Disconnecting ...");
-					m.msg_type = 'd';
-					sendto(sock_fd, &m, sizeof(struct message), 0, 
-						(const struct sockaddr *)&server_addr, sizeof(server_addr));
-					printf("Sent disconnection message");
-					close(sock_fd);
-					exit(0);
-				}
+		while(play_state==1){
+			char ch;
+
+			do{
+				printf("what is your character?: 'r'-release 'q'-disconnect ");
+				ch = getchar();
+				fflush(stdin);
+				ch = tolower(ch);  
+			}while(!isalpha(ch));
+
+			if(ch=='r'){
+				// implement aditional condition to check if 10 seconds have passed in play state
+				printf("Releasing ball ...");
+
+				play_state = 0; //go back to waiting state
+				m.msg_type = 'r';
+				sendto(sock_fd, &m, sizeof(struct message), 0, 
+					(const struct sockaddr *)&server_addr, sizeof(server_addr));
 			}
+
+			else if(ch=='q'){
+				printf("Disconnecting ...");
+				m.msg_type = 'd';
+				sendto(sock_fd, &m, sizeof(struct message), 0, 
+					(const struct sockaddr *)&server_addr, sizeof(server_addr));
+				printf("Sent disconnection message");
+				close(sock_fd);
+				exit(0);
+			}
+		}
 	}
 	close(sock_fd);
 	exit(0);

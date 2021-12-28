@@ -57,6 +57,51 @@ void add_client(struct Node** head_ref, char new_address[], int new_port)
     return;
 }
 
+void sendto_nextplayer(int sock_fd, struct Node** head_ref, char player_address[], int player_port){
+   
+   struct Node *temp = *head_ref;
+   struct Node *next_player;
+   struct Node *first_node = *head_ref;
+
+   int next_player_port;
+   char next_player_address[100];
+
+    if (*head_ref == NULL){
+        printf("No players present");
+        return;
+    }
+
+
+    while (temp->next != NULL) {
+
+        if(strcmp(temp->address, player_address)==0 && temp->port == player_port){
+            break;
+        }
+        temp = temp->next;
+    }
+ 
+    // If key was not present in linked list
+    if (temp == NULL){
+		printf("player not found");
+        return;
+    }
+
+    if (temp->next==NULL){
+        // if the current player is the last on the list (including the case where it is the only client of the list),
+        // send to the first player of the list
+
+        next_player_port = first_node->port;
+        strcpy(next_player_address, first_node->address);
+    }
+
+    else{
+        next_player = temp->next;
+        next_player_port = (next_player)->port;
+        strcpy(next_player_address, next_player->address);
+    }
+    send_playmessage(sock_fd, next_player_address, next_player_port);
+}
+
 void printList(struct Node* node)
 {
 	printf("______________Client List____________\n");
@@ -75,6 +120,7 @@ void delete_client(struct Node** head_ref, char delete_address[], int delete_por
  
     // If head node itself holds the key to be deleted
     if (temp != NULL && strcmp(temp->address, delete_address)==0 && temp->port == delete_port) {
+        printf("eliminated first element\n");
         *head_ref = temp->next; // Changed head
         free(temp); // free old head
         return;
@@ -82,22 +128,48 @@ void delete_client(struct Node** head_ref, char delete_address[], int delete_por
  
     // Search for the key to be deleted, keep track of the
     // previous node as we need to change 'prev->next'
-    while (temp != NULL && strcmp(temp->address, delete_address)!=0 && temp->port != delete_port) {
+
+    while (temp != NULL){
+
+        if(temp->port==delete_port && strcmp(temp->address, delete_address)==0){
+                break;
+        }
         prev = temp;
         temp = temp->next;
     }
- 
+    
     // If key was not present in linked list
-    if (temp == NULL)
-		printf("client not found");
+    if (temp == NULL){
+		printf("\n client not found \n");
         return;
- 
+    }
+
     // Unlink the node from linked list
     prev->next = temp->next;
  
     free(temp); // Free memory
 }
 
+void send_playmessage(int sock_fd, char addr[], int port){
+    // will need to expand arguments: include game state variables, such as ball position and paddle
+
+    int nbytes;
+    struct message m;
+    struct sockaddr_in player_addr;
+    socklen_t player_addr_size = sizeof(struct sockaddr_in);  
+
+    player_addr.sin_family = AF_INET;
+    player_addr.sin_port = htons(port);
+    if( inet_pton(AF_INET, addr, &player_addr.sin_addr) < 1){
+        printf("no valid address: \n");
+        exit(-1);
+    }
+
+    // create message  (will need to expand struct message)
+    m.msg_type = 's';
+    nbytes = sendto(sock_fd, &m, sizeof(struct message), 0,
+                (const struct sockaddr *) &player_addr, player_addr_size);
+}
 
 int main()
 {
@@ -125,14 +197,13 @@ int main()
 	int nbytes;
 	struct Node* client_list = NULL;
 	struct message m;
+    int gameOn = 0;
 
     char reply_message[100];
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_size = sizeof(struct sockaddr_in);
 
 	while(1){
-
-		printf("...\n");
 		nbytes = recvfrom(sock_fd, &m, sizeof(struct message), 0,
 		                  ( struct sockaddr *)&client_addr, &client_addr_size);
 
@@ -141,42 +212,34 @@ int main()
 		if (inet_ntop(AF_INET, &client_addr.sin_addr, remote_addr_str, 100) == NULL){
 			perror("converting remote addr: ");
 		}
-		//printf("received %d bytes from %s %d:\n", nbytes, remote_addr_str, remote_port);
-
 
 		if(m.msg_type == 'c'){
 			printf("connection message detected!\n");
-			//printf("remote_addr_str: %s remote_port: %d", remote_addr_str, remote_port);
-			
+
 			//adicionar cliente â lista
 			add_client(&client_list, remote_addr_str, remote_port);
 
-			char reply_message[100] = "client added to the list";		//this was for debug, will be deleted
-			nbytes = sendto(sock_fd, reply_message, strlen(reply_message)+1, 0, &client_addr, client_addr_size);
+            if(gameOn==0){
+                //first player joining the server
+                gameOn = 1;
+
+                //send play_message to the player
+                send_playmessage(sock_fd, remote_addr_str, remote_port);
+            }
 		}
+
+        else if(m.msg_type == 'r'){
+            printf("release ball message detected!\n");
+            sendto_nextplayer(sock_fd, &client_list, remote_addr_str, remote_port);
+        }    
 
 		else if(m.msg_type == 'd'){
 			printf("disconnection message detected!\n");
-
+            
+            printf("deleting player %s with port: %d", remote_addr_str, remote_port);
 			delete_client(&client_list, remote_addr_str, remote_port);
+            sendto_nextplayer(sock_fd, &client_list, remote_addr_str, remote_port);
 		}
-
-        printf("\n\nsending message to client 1");
-        struct sockaddr_in player_addr;
-        socklen_t player_addr_size = sizeof(struct sockaddr_in);  
-
-        player_addr.sin_family = AF_INET;
-        player_addr.sin_port = htons(client_list->port);
-        if( inet_pton(AF_INET, client_list->address, &player_addr.sin_addr) < 1){
-	        printf("no valid address: \n");
-	        exit(-1);
-        }
-        m.msg_type = 's';
-        nbytes = sendto(sock_fd,
-	                    &m, sizeof(struct message), 0,
-	                    (const struct sockaddr *) &player_addr, player_addr_size);
-
-
 
 		printList(client_list);
     }
