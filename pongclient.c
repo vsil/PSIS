@@ -56,27 +56,33 @@ char buff[100];
 			(const struct sockaddr *)&server_addr, sizeof(server_addr));
  
 	nbytes = recv(sock_fd, recv_message, 100, 0);
-	printf("Received connection confirmation: '%s'", recv_message);
+	printf("\n Received connection confirmation: '%s'", recv_message);
 
 	while(1){
-		char ch;
-		do{
-			printf("what is your character(a..z)?: ");
-			ch = getchar();
-			ch = tolower(ch);  
-		}while(!isalpha(ch));
-
-
-		if(ch=='d'){
-			printf("Disconnecting ...");
-			m.msg_type = 'd';
-			sendto(sock_fd, &m, sizeof(struct message), 0, 
-				(const struct sockaddr *)&server_addr, sizeof(server_addr));
-			printf("Sent disconnection message");
-			close(sock_fd);
-			exit(0);
-		}
 		
+
+		nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
+			printf("\nmessage received!");
+			if(m.msg_type=='s'){
+				printf("\nEntering play state! \n");
+
+				char ch;
+				do{
+					printf("what is your character(a..z)?: ");
+					ch = getchar();
+					ch = tolower(ch);  
+				}while(!isalpha(ch));
+
+				if(ch=='d'){
+					printf("Disconnecting ...");
+					m.msg_type = 'd';
+					sendto(sock_fd, &m, sizeof(struct message), 0, 
+						(const struct sockaddr *)&server_addr, sizeof(server_addr));
+					printf("Sent disconnection message");
+					close(sock_fd);
+					exit(0);
+				}
+			}
 	}
 	close(sock_fd);
 	exit(0);

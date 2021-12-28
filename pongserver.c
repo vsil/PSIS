@@ -132,7 +132,7 @@ int main()
 
 	while(1){
 
-		printf("...");
+		printf("...\n");
 		nbytes = recvfrom(sock_fd, &m, sizeof(struct message), 0,
 		                  ( struct sockaddr *)&client_addr, &client_addr_size);
 
@@ -161,34 +161,27 @@ int main()
 			delete_client(&client_list, remote_addr_str, remote_port);
 		}
 
-		printList(client_list);
-/*
-		char linha[100];
-		printf("going to send a reply (press enter to continue\n");
-		fgets(linha, 100, stdin);
+        printf("\n\nsending message to client 1");
+        struct sockaddr_in player_addr;
+        socklen_t player_addr_size = sizeof(struct sockaddr_in);  
 
-		nbytes = sendto(sock_fd,
-	                    reply_message, strlen(reply_message)+1, 0,
-	                    (const struct sockaddr *) &client_addr, client_addr_size);
-		printf("\nsent %d %s\n\n", nbytes, reply_message);
-*/
+        player_addr.sin_family = AF_INET;
+        player_addr.sin_port = htons(client_list->port);
+        if( inet_pton(AF_INET, client_list->address, &player_addr.sin_addr) < 1){
+	        printf("no valid address: \n");
+	        exit(-1);
+        }
+        m.msg_type = 's';
+        nbytes = sendto(sock_fd,
+	                    &m, sizeof(struct message), 0,
+	                    (const struct sockaddr *) &player_addr, player_addr_size);
+
+
+
+		printList(client_list);
     }
 
     close(sock_fd);
 	exit(0);
 }
-
-/*
-        if(m.msg_type == 0){
-            ch = m.ch;
-            pos_x = WINDOW_SIZE/2;
-            pos_y = WINDOW_SIZE/2;
-
-            //STEP 3
-            char_data[n_chars].ch = ch;
-            char_data[n_chars].pos_x = pos_x;
-            char_data[n_chars].pos_y = pos_y;
-            n_chars++;
-        }    
-*/
 
