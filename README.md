@@ -14,8 +14,8 @@ compilation and execution:
  ./server
  ./client
 
-[updates]: 
-    - added graphics
-    - added 10 second condition
-    - added command line input
-    - makefile (run make in the command line to compile: it generates two executables, server and client)
+UPDATES:
+- added graphics
+- added 10 second condition
+- added command line input
+- makefile (run make in the command line to compile: it generates two executables, server and client)
