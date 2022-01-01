@@ -1,18 +1,13 @@
-#define WINDOW_SIZE 20
-#define PADLE_SIZE 2
+//#include "visualization.h"
 
-#define SOCK_ADDRESS "/tmp/sock_16"
+/* List of commands */
+typedef enum command_t {CONNECT, RELEASE, SEND, MOVE, DISCONNECT} command_t;
 
-//typedef enum command {CONNECT, RELEASE, SEND, MOVE, DISCONNECT} command;
-
+/* Message definition */
 typedef struct message
 {   
-    char msg_type;  // 'c' - Connect; 'r' - Release_ball; 's' - Send_ball; 'm' - Move_ball; 'd' - Disconnect
+    command_t command;              // commands
+    //ball_position_t ball_position;   // ball position (to be sent when command = MOVE)
 }message;
 
-/*    
-    ball_position_t ball_position;
-    paddle_position_t paddle_position; 
-
-*/    
 
