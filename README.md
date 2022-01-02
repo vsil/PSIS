@@ -15,7 +15,21 @@ compilation and execution:
  ./client
 
 [updates]: 
-    - added graphics
+    - added graphics 
     - added 10 second condition
     - added command line input
-    - makefile (run make in the command line to compile: it generates two executables, server and client)
+    - added function paddle_hit_ball (has to be improved)
+    - added full duplex communication
+    - added move_ball messages
+    - created a makefile (run make in the command line to compile: it generates two executables, server and client)
+
+[to_do]:
+    - remove extra balls that appear on the screen
+    - improve padde_hit_ball function
+    - add more comments to the code and refactor in some parts
+    - double check if the command line IP input is working fine
+
+to compile and execute:
+	run "make"
+	./server (execute server)
+	./client 127.0.0.1 (execute client)

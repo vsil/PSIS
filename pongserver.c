@@ -3,18 +3,16 @@
 #include<arpa/inet.h>
 #include<sys/socket.h>
 
-
-#include <ctype.h>
-#include <stdbool.h>
+// ncurses library
 #include <ncurses.h>
 
+// Include header files
 #include "client_list.h"
-//#include "pong.h"
+#include "pong.h"
 #include "sock_dg_inet.h"
 
 
 void send_play_message(int sock_fd, char addr[], int port){
-    // will need to expand arguments: include game state variables, such as ball position and paddle
 
     int nbytes;
     struct message m;
@@ -34,10 +32,39 @@ void send_play_message(int sock_fd, char addr[], int port){
                 (const struct sockaddr *) &player_addr, player_addr_size);
 }
 
+void send_move_message(int sock_fd, struct Node** head_ref, char player_address[], int player_port, ball_position_t ball){
+
+    int nbytes;
+    struct message m;
+    struct sockaddr_in player_addr;
+    socklen_t player_addr_size = sizeof(struct sockaddr_in);  
+
+    /* Message to be sent */
+    m.command = MOVE;
+    m.ball_position = ball;
+
+    // Store head node
+    struct Node *temp = *head_ref;
+
+    while (temp != NULL){
+        if(!(temp->port==player_port && strcmp(temp->address, player_address)==0)){
+            player_addr.sin_family = AF_INET;    // INET domain
+            player_addr.sin_port = htons(temp->port);
+            if( inet_pton(AF_INET, temp->address, &player_addr.sin_addr) < 1){
+                printf("no valid address: \n");
+                exit(-1);
+            }
+            nbytes = sendto(sock_fd, &m, sizeof(struct message), 0,
+                (const struct sockaddr *) &player_addr, player_addr_size);
+        }
+        temp = temp->next;
+    }
+}
+
 
 int main()
 {
-
+    // Create an internet domain datagram socket
 	int sock_fd;
 	sock_fd= socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock_fd == -1){
@@ -66,11 +93,10 @@ int main()
 	struct message m;
     bool game_start = true;
 
-    char reply_message[100];
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_size = sizeof(struct sockaddr_in);
 
-    int n_clients;
+    int n_clients = 0;
 
 	while(1){
 
@@ -90,7 +116,7 @@ int main()
                 printf("connection message detected!\n");
 			    //adicionar cliente â lista
 			    add_client(&client_list, remote_addr_str, remote_port);
-                if(game_start){
+                if(n_clients == 1){
                     //first player joining the server receives the ball
                     //send play_message to the player
                     send_play_message(sock_fd, remote_addr_str, remote_port);
@@ -106,6 +132,10 @@ int main()
                     else
 						if (next_player(&client_list, remote_addr_str, remote_port))
 							send_play_message(sock_fd, next_player_address, next_player_port);
+                break;
+            case MOVE:
+                printf("move ball message detected!\n");
+                send_move_message(sock_fd, &client_list, remote_addr_str, remote_port, m.ball_position);
                 break;
             case DISCONNECT:
                 n_clients--;

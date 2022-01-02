@@ -13,8 +13,7 @@
 #include <time.h>
 
 // Include header files
-#include "visualization.h"
-#include "pong.h"
+#include "pong.h" 			// visualization already included here
 #include "sock_dg_inet.h"
 
 
@@ -87,55 +86,79 @@ int main(int argc, char *argv[]) {
 
 	/* Clock variables */
 	time_t begin; 
-	double time_spent;			
+	double time_spent;
+
+	/* Clear string */
+	char clear[] = "                                          ";		
 
 	while(1){
 
 		// Wait for a message
 		recv(sock_fd, &m, sizeof(struct message), 0);
 
+		// If a Move_ball message is received
+		if(m.command == MOVE){
+			/* Print new messages to the text display*/
+			mvwprintw(message_win, 1,1,"%s",clear);
+			mvwprintw(message_win, 1,1,"WAITING STATE");
+			mvwprintw(message_win, 2,1,"%s",clear);
+			mvwprintw(message_win, 3,1,"%s",clear);
+			/*Update ball */
+			ball = m.ball_position;
+            draw_ball(my_win, &ball, false);
+            moove_ball(&ball);
+            draw_ball(my_win, &ball, true);
+			wrefresh(message_win);
+		}
+		// If a Send_ball message is received
 		if(m.command == SEND){
 			play_state = true; 		// Entering play_state
 			begin = time(NULL);   	// Initialize clock count
+			mvwprintw(message_win, 1,1,"%s",clear);
+			mvwprintw(message_win, 1,1,"PLAY STATE");
+			mvwprintw(message_win, 2,1,"You can control the paddle: ");
+			wrefresh(message_win);
 		}
 
 		while(play_state){
 			
-			mvwprintw(message_win, 1,1,"PLAY STATE");
-			mvwprintw(message_win, 2,1,"Use arrow keys to control the paddle");
 			key = wgetch(my_win);
 
 			/* Check time spent and print it */
 			time_spent = (double)(time(NULL) - begin);
-			mvwprintw(message_win, 3,23,"Time spent: %f",time_spent);
+			mvwprintw(message_win, 1,22,"Time spent: %f",time_spent);
+			mvwprintw(message_win, 3,1,"%s",clear);
 
 			/* Check the key pressed */
        		if (key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN){
+				/* Update paddle */
             	draw_paddle(my_win, &paddle, false);
            		moove_paddle (&paddle, key);
             	draw_paddle(my_win, &paddle, true);
-
+				/*Update ball */
             	draw_ball(my_win, &ball, false);
-				paddle_hit_ball(&ball, &paddle);
             	moove_ball(&ball);
-				paddle_hit_ball(&ball, &paddle);
             	draw_ball(my_win, &ball, true);
-
-				// draw_ball(my_win, &ball, false);
-				// draw_paddle(my_win, &paddle, true);
-				// paddle_hit_ball(&ball, &paddle);
-				// draw_ball(my_win, &ball, true);
-
-				// m.command = MOVE;
-				// m.ball_position = ball;
-				// sendto(sock_fd, &m, sizeof(struct message), 0, 
-				// 	(const struct sockaddr *)&server_addr, sizeof(server_addr));
+				/* Check if paddle has hit the ball */
+				draw_ball(my_win, &ball, false);
+				paddle_hit_ball(&ball, &paddle);
+				draw_ball(my_win, &ball, true);
+				/* Send Move_ball message to the server */
+				m.command = MOVE;
+				m.ball_position = ball;
+				sendto(sock_fd, &m, sizeof(struct message), 0, 
+					(const struct sockaddr *)&server_addr, sizeof(server_addr));
         	}
 			else if (key == 'r' && time_spent >= 10){
 				play_state = false; 	// go back to waiting state
 				m.command = RELEASE;
 				sendto(sock_fd, &m, sizeof(struct message), 0, 
 					(const struct sockaddr *)&server_addr, sizeof(server_addr));
+				/* Print new messages to the text display*/
+				mvwprintw(message_win, 1,1,"%s",clear);
+				mvwprintw(message_win, 1,1,"WAITING STATE");
+				mvwprintw(message_win, 2,1,"%s",clear);
+				mvwprintw(message_win, 3,1,"%s",clear);
 			}
 			else if(key == 'q'){
 				m.command = DISCONNECT;
@@ -146,7 +169,7 @@ int main(int argc, char *argv[]) {
 				exit(0);
 			}
 			
-			mvwprintw(message_win, 3,1,"%c key pressed", key);
+			mvwprintw(message_win, 2,29,"%c key pressed", key);
         	wrefresh(message_win);
 		}
 	}
