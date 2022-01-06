@@ -21,6 +21,7 @@ typedef struct paddle_position_t{
     int length;
 } paddle_position_t;
 
+
 /* Functions */
 void new_paddle (paddle_position_t * paddle, int legth);
 void moove_paddle (paddle_position_t * paddle, int direction);

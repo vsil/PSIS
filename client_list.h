@@ -6,10 +6,28 @@
 #include <string.h>
 #include <stdbool.h>
 
+#include "visualization.h"
+
+
+/* List of commands */
+typedef enum command_t {CONNECT, BOARD_UPDATE, PADDLE_MOVE, DISCONNECT} command_t;
+
+/* Message definition */
+typedef struct message
+{   
+    command_t command;               // commands
+    ball_position_t* ball_position;   // ball position
+    struct Node* client_list;      // paddle positions
+                                     
+}message;
+
 // A linked list node
 struct Node {
     char address[100];
-	int port;
+    int port;
+    paddle_position_t* paddle;
+    //bool current_player;
+    int player_score;
     struct Node* next;
 };
 
@@ -19,7 +37,16 @@ char next_player_address[100];
 bool is_next_player;
 
 // Functions
-void add_client(struct Node** head_ref, char new_address[], int new_port);
+
+void add_client(struct Node** head_ref, char new_address[], int new_port, paddle_position_t *new_paddle);
 void delete_client(struct Node** head_ref, char delete_address[], int delete_port);
 void print_list(struct Node* node);
 bool next_player(struct Node** head_ref, char player_address[], int player_port);
+
+//TEMPORARY
+void draw_all_paddles(struct Node* client_list, int del);
+
+
+
+// GRAPHICS
+//void draw_all_paddles(WINDOW *win, struct Node* client_list, int del);

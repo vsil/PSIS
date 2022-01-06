@@ -7,12 +7,13 @@
 #include <ncurses.h>
 
 // Include header files
-#include "client_list.h"
+#include "client_list.h"        // "visualization.h" included here
 #include "pong.h"
 #include "sock_dg_inet.h"
 
 
-void send_play_message(int sock_fd, char addr[], int port){
+
+void send_board_update(int sock_fd, char addr[], int port, ball_position_t* ball, struct Node* client_list){
 
     int nbytes;
     struct message m;
@@ -26,13 +27,24 @@ void send_play_message(int sock_fd, char addr[], int port){
         exit(-1);
     }
 
-    // create message  (will need to expand struct message)
-    m.command = SEND;
+    // create message 
+    m.command = BOARD_UPDATE;
+    m.ball_position = ball;
+    m.client_list = client_list;
+
+    
+    printf("\n\n ____ send_board_update: ___ ");
+    printf("\n ball x: %d", m.ball_position->x);
+    printf("\n client list port: %d", m.client_list->port);
+    printf("\n paddle x: %d", m.client_list->paddle->x);
+    
+
     nbytes = sendto(sock_fd, &m, sizeof(struct message), 0,
                 (const struct sockaddr *) &player_addr, player_addr_size);
 }
 
-void send_move_message(int sock_fd, struct Node** head_ref, char player_address[], int player_port, ball_position_t ball){
+
+void send_move_message(int sock_fd, struct Node** head_ref, char player_address[], int player_port, ball_position_t* ball){
 
     int nbytes;
     struct message m;
@@ -40,7 +52,7 @@ void send_move_message(int sock_fd, struct Node** head_ref, char player_address[
     socklen_t player_addr_size = sizeof(struct sockaddr_in);  
 
     /* Message to be sent */
-    m.command = MOVE;
+    //m.command = MOVE;
     m.ball_position = ball;
 
     // Store head node
@@ -91,12 +103,16 @@ int main()
 	int nbytes;
 	struct Node* client_list = NULL;
 	struct message m;
-    bool game_start = true;
+    //bool game_start = true;
 
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_size = sizeof(struct sockaddr_in);
 
     int n_clients = 0;
+
+    // Initialize paddle position and ball position variables
+	paddle_position_t paddle;
+	ball_position_t ball;
 
 	while(1){
 
@@ -109,41 +125,44 @@ int main()
 			perror("converting remote addr: ");
 		}
         printf("received %d bytes from %s %d:\n", nbytes, remote_addr_str, remote_port);
+    
         switch(m.command){
 
             case CONNECT:
                 n_clients++;
                 printf("connection message detected!\n");
+
+                //random initialization of paddle position
+                new_paddle(&paddle, PADDLE_SIZE);                   // MAKE THIS FUNC RANDOM
+
+                printf("1. paddle x: %d y: %d ", paddle.x, paddle.y);
 			    //adicionar cliente â lista
-			    add_client(&client_list, remote_addr_str, remote_port);
+			    add_client(&client_list, remote_addr_str, remote_port, &paddle);
+                printf("\n 2. x: %d", client_list->paddle->x);
+
                 if(n_clients == 1){
-                    //first player joining the server receives the ball
-                    //send play_message to the player
-                    send_play_message(sock_fd, remote_addr_str, remote_port);
-                    game_start = false;
+                    //random initialization of ball paddle positions
+                    place_ball_random(&ball);
                 }
+
+                //sends board_update message to the client
+                send_board_update(sock_fd, remote_addr_str, remote_port, &ball, client_list);
+                //game_start = false;
+
                 break;
-            case RELEASE:
-                printf("release ball message detected!\n");
-                    /* send the ball to the next player;
-                    if there is only one player, send the ball to that player */
-                    if (n_clients == 1)
-                        send_play_message(sock_fd, remote_addr_str, remote_port);
-                    else
-						if (next_player(&client_list, remote_addr_str, remote_port))
-							send_play_message(sock_fd, next_player_address, next_player_port);
+
+            case PADDLE_MOVE:
+                // calculates new paddle position, updates the ball
+                // sends board_update message to all clients (ball position and paddles from all clients)
                 break;
-            case MOVE:
-                printf("move ball message detected!\n");
-                send_move_message(sock_fd, &client_list, remote_addr_str, remote_port, m.ball_position);
-                break;
+
             case DISCONNECT:
                 n_clients--;
                 printf("disconnection message detected!\n");     
                 printf("deleting player %s with port: %d \n", remote_addr_str, remote_port);
 		        delete_client(&client_list, remote_addr_str, remote_port);
 				if (next_player(&client_list, remote_addr_str, remote_port))
-							send_play_message(sock_fd, next_player_address, next_player_port);
+							//send_play_message(sock_fd, next_player_address, next_player_port);
                 break;
         }
 		print_list(client_list);
@@ -152,4 +171,3 @@ int main()
     close(sock_fd);
 	exit(0);
 }
-

@@ -2,7 +2,7 @@
 
 /* Given a reference (pointer to pointer) to the head
    of a list and an int, appends a new node at the end  */
-void add_client(struct Node** head_ref, char new_address[], int new_port)
+void add_client(struct Node** head_ref, char new_address[], int new_port, paddle_position_t * new_paddle)
 {
     /* 1. allocate node */
     struct Node* new_node = (struct Node*) malloc(sizeof(struct Node));
@@ -11,6 +11,7 @@ void add_client(struct Node** head_ref, char new_address[], int new_port)
     /* 2. put in the data  */
 	strcpy(new_node->address, new_address);
 	new_node->port = new_port;
+    new_node->paddle = new_paddle;
 
     /* 3. This new node is going to be the last node, so make next
           of it as NULL*/// Internet domain sockets libraries
@@ -126,4 +127,15 @@ bool next_player(struct Node** head_ref, char player_address[], int player_port)
     // st->next_player_address = d;
     // st->next_player_port = m;
     //send_play_message(sock_fd, next_player_address, next_player_port);
+}
+
+void draw_all_paddles(struct Node* client_list, int del){
+    struct Node* temp;
+    temp = client_list;
+    while (temp != NULL) {
+        printf("\ndraw_all_paddles x: %d", temp->paddle->x);
+
+        //draw_paddle(win, temp->paddle, true);
+        temp = temp->next;
+    }
 }
