@@ -2,7 +2,7 @@
 
 /* Given a reference (pointer to pointer) to the head
    of a list and an int, appends a new node at the end  */
-void add_client(struct Node** head_ref, char new_address[], int new_port, paddle_position_t * new_paddle)
+void add_client(struct Node** head_ref, char new_address[], int new_port, paddle_position_t new_paddle)
 {
     /* 1. allocate node */
     struct Node* new_node = (struct Node*) malloc(sizeof(struct Node));
@@ -12,6 +12,7 @@ void add_client(struct Node** head_ref, char new_address[], int new_port, paddle
 	strcpy(new_node->address, new_address);
 	new_node->port = new_port;
     new_node->paddle = new_paddle;
+    new_node->player_score = 0;
 
     /* 3. This new node is going to be the last node, so make next
           of it as NULL*/// Internet domain sockets libraries
@@ -76,6 +77,7 @@ void print_list(struct Node* node)
     while (node != NULL) {
 		printf("Address: %s\n", node->address);
         printf("Port: %d\n", node->port);
+        printf("Paddle (x,y): (%d,%d)\n\n", node->paddle.x, node->paddle.y);
         node = node->next;
     }
     printf("_______________Client List End_____________\n");
@@ -129,13 +131,65 @@ bool next_player(struct Node** head_ref, char player_address[], int player_port)
     //send_play_message(sock_fd, next_player_address, next_player_port);
 }
 
-void draw_all_paddles(struct Node* client_list, int del){
+
+
+/* Given a reference (pointer to pointer) to the head
+   of a list and an int, appends a new node at the end  */
+void add_player_list(struct Paddle_Node** head_ref, paddle_position_t new_paddle, int player_score)
+{
+    /* 1. allocate node */
+    struct Paddle_Node* new_node = (struct Paddle_Node*) malloc(sizeof(struct Paddle_Node));
+    struct Paddle_Node *last = *head_ref;  /* used in step 5*/
+
+    /* 2. put in the data  */
+    new_node->paddle = new_paddle;
+    new_node->player_score = player_score;
+
+    /* 3. This new node is going to be the last node, so make next
+          of it as NULL*/// Internet domain sockets libraries
+    new_node->next = NULL;
+
+    /* 4. If the Linked List is empty, then make the new node as head */
+    if (*head_ref == NULL)
+    {
+       *head_ref = new_node;
+       return;
+    } 
+
+    /* 5. Else traverse till the last node */
+    while (last->next != NULL)
+        last = last->next;
+
+    /* 6. Change the next of last node */
+    last->next = new_node;
+    return;
+}
+
+
+// Updates the client list with the new paddle position of the player
+void update_paddle(struct Node** client_list, char remote_addr_str[], int remote_port, ball_position_t ball, int key)
+{
+    struct Node *temp = *client_list;
+    paddle_position_t paddle;
+
+    while (temp != NULL){
+        if(temp->port==remote_port && strcmp(temp->address, remote_addr_str)==0){
+            paddle = temp->paddle;
+            moove_paddle(&paddle, key);       // add function to check if it is a valid move (no collisions)
+                                              // moove_paddle(CLIENTLIST, &paddle, key)
+            return;
+        }
+    }
+    exit(0);      // add message error if client not found    
+}
+
+/*
+void draw_all_paddles(WINDOW *win, struct Node* client_list, int del){
     struct Node* temp;
     temp = client_list;
     while (temp != NULL) {
-        printf("\ndraw_all_paddles x: %d", temp->paddle->x);
-
         //draw_paddle(win, temp->paddle, true);
         temp = temp->next;
     }
 }
+*/

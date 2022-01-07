@@ -1,10 +1,12 @@
 #include "visualization.h"
 
 // Creates a new paddle
+// to do: make it random; make function to verify it is a valid position e.g: no paddles or ball in the same position, no crossing edges of window
 void new_paddle (paddle_position_t * paddle, int legth){
     paddle->x = WINDOW_SIZE/2;
     paddle->y = WINDOW_SIZE-2;
     paddle->length = legth;
+    printf("NEW paddle x: %d y: %d ", paddle->x, paddle->y);
 }
 
 // Moves the paddle (update its position)

@@ -17,6 +17,22 @@
 #include "sock_dg_inet.h"
 
 
+// receives player paddles and scores from the server, adds them to Paddle_List
+void update_player_positions(int sock_fd, struct Paddle_Node** paddle_list, int n_clients)
+{
+	paddle_position_message m_paddle;
+	paddle_position_t paddle;
+	int player_score;
+
+	for(int i=0; i<n_clients; i++){
+		recv(sock_fd, &m_paddle, sizeof(struct paddle_position_message), 0);
+		paddle = m_paddle.paddle_position;
+		player_score = m_paddle.player_score;
+		printf("i: %d  x = %d", i, paddle.x);
+		add_player_list(paddle_list, paddle, player_score);	
+	}
+}
+
 int main(int argc, char *argv[]) {
  
 	// Create an internet domain datagram socket
@@ -45,42 +61,34 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	// Initialize message
-	struct message m;
-
 	// send connection message
+	struct message m;
 	m.command = CONNECT;
 
 	sendto(sock_fd, &m, sizeof(struct message), 0, 
 			(const struct sockaddr *)&server_addr, sizeof(server_addr));
 
+
+	// receive the first Board_update message
+
 	int nbytes;
-	// receive Board_update message with paddles and ball positions
+	int n_clients;
+	ball_position_t ball;
+	struct Paddle_Node* Paddle_List = NULL; 
+
+	// receives general message
 	nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
-	
-	printf("\n received %d bytes", nbytes);
-
-	// Initialize paddle position and ball position variables
-	paddle_position_t* paddle;
-	ball_position_t* ball;
 	ball = m.ball_position;
+	n_clients = m.number_clients;
 
-
-	printf("\n begin \n");
-	printf("\n command: %d", m.command);
-    //printf("\n ball x: %d", ball->x);
-    //printf("\n ball x: %d", m.ball_position->x);
-    printf("\n client list port: %d", m.client_list->port);
-    printf("\n paddle x: %d", m.client_list->paddle->x);
-    
-
-	// Create and draw a paddle
-	draw_all_paddles(m.client_list, true);
-
-	// Draw the ball ball
+	// receives paddle_position_message and updates Paddle_List with player information
+	update_player_positions(sock_fd, &Paddle_List, n_clients);	 
+	
+	// Draw the paddles and ball
+	//draw_all_paddles(Paddle_List, true);
     //draw_ball(my_win, &ball, true);
 
-	bool play_state = false; // Initialize play_state boolean
+
 	int key;				 // Read from keyboard
 
 	/* Clear string */
@@ -88,15 +96,16 @@ int main(int argc, char *argv[]) {
 
 	while(1){
 
-		key = getchar();
+		printf("insert character: ");
+		key = getch();										// input not working; later with ncurses thid will work
+		printf("\n inserted character: %d", key);
 
 		/* Check the key pressed */
 		if (key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN){
 
 			/* Send Paddle_move message to the server */
 			m.command = PADDLE_MOVE;
-			
-			//m.ball_position = ball;
+			m.pressed_key = key;
 			
 			sendto(sock_fd, &m, sizeof(struct message), 0, 
 				(const struct sockaddr *)&server_addr, sizeof(server_addr));
@@ -117,10 +126,13 @@ int main(int argc, char *argv[]) {
 
 		// If a Board_update message is received
 		if(m.command == BOARD_UPDATE){
-			/*Print ball and paddles */
 			ball = m.ball_position;
-			
+			n_clients = m.number_clients;
+			update_player_positions(sock_fd, &Paddle_List, n_clients);	 
+
 			/*
+			Print ball and paddles 
+
             draw_ball(my_win, &ball, false);
             moove_ball(&ball);
             draw_ball(my_win, &ball, true);

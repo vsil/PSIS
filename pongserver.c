@@ -13,10 +13,12 @@
 
 
 
-void send_board_update(int sock_fd, char addr[], int port, ball_position_t* ball, struct Node* client_list){
+void send_board_update(int sock_fd, char addr[], int port, ball_position_t ball, struct Node* client_list, int n_clients){
 
     int nbytes;
-    struct message m;
+    message m;
+    paddle_position_message paddle_m;
+
     struct sockaddr_in player_addr;
     socklen_t player_addr_size = sizeof(struct sockaddr_in);  
 
@@ -27,24 +29,31 @@ void send_board_update(int sock_fd, char addr[], int port, ball_position_t* ball
         exit(-1);
     }
 
-    // create message 
+    // create general message 
     m.command = BOARD_UPDATE;
     m.ball_position = ball;
-    m.client_list = client_list;
+    m.number_clients = n_clients;
 
-    
-    printf("\n\n ____ send_board_update: ___ ");
-    printf("\n ball x: %d", m.ball_position->x);
-    printf("\n client list port: %d", m.client_list->port);
-    printf("\n paddle x: %d", m.client_list->paddle->x);
-    
-
+    printf("\n ball x: %d n_clients: %d", m.ball_position.x, m.number_clients);
     nbytes = sendto(sock_fd, &m, sizeof(struct message), 0,
                 (const struct sockaddr *) &player_addr, player_addr_size);
+
+    // go through client list and send to the client the paddle info of each player
+    // client builds a paddle list with this information
+    for(int i=0; i<n_clients; i++){
+        paddle_m.paddle_position = client_list->paddle;
+        paddle_m.player_score = client_list->player_score;
+        printf("\n x: %d score: %d", paddle_m.paddle_position.x, paddle_m.player_score);
+
+        nbytes = sendto(sock_fd, &paddle_m, sizeof(struct paddle_position_message), 0,
+                (const struct sockaddr *) &player_addr, player_addr_size);
+
+        client_list = client_list->next;
+    }
 }
 
 
-void send_move_message(int sock_fd, struct Node** head_ref, char player_address[], int player_port, ball_position_t* ball){
+void send_move_message(int sock_fd, struct Node** head_ref, char player_address[], int player_port, ball_position_t ball){
 
     int nbytes;
     struct message m;
@@ -103,7 +112,6 @@ int main()
 	int nbytes;
 	struct Node* client_list = NULL;
 	struct message m;
-    //bool game_start = true;
 
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_size = sizeof(struct sockaddr_in);
@@ -125,35 +133,42 @@ int main()
 			perror("converting remote addr: ");
 		}
         printf("received %d bytes from %s %d:\n", nbytes, remote_addr_str, remote_port);
-    
+        
+        int pressed_key;
+
         switch(m.command){
 
             case CONNECT:
                 n_clients++;
                 printf("connection message detected!\n");
 
-                //random initialization of paddle position
-                new_paddle(&paddle, PADDLE_SIZE);                   // MAKE THIS FUNC RANDOM
-
-                printf("1. paddle x: %d y: %d ", paddle.x, paddle.y);
-			    //adicionar cliente â lista
-			    add_client(&client_list, remote_addr_str, remote_port, &paddle);
-                printf("\n 2. x: %d", client_list->paddle->x);
-
                 if(n_clients == 1){
-                    //random initialization of ball paddle positions
+                    //random initialization of ball position
                     place_ball_random(&ball);
                 }
 
-                //sends board_update message to the client
-                send_board_update(sock_fd, remote_addr_str, remote_port, &ball, client_list);
-                //game_start = false;
+                else if(n_clients>10){
+                    printf("Maximum number of clients reached");
+                    break;                                          // check if this workd
+                }
 
+                //random initialization of paddle position
+                new_paddle(&paddle, PADDLE_SIZE);                   // MAKE THIS FUNC RANDOM
+                
+			    //adicionar cliente â lista
+			    add_client(&client_list, remote_addr_str, remote_port, paddle);
+
+                //sends board_update message to the client
+                send_board_update(sock_fd, remote_addr_str, remote_port, ball, client_list, n_clients);
                 break;
 
             case PADDLE_MOVE:
                 // calculates new paddle position, updates the ball
                 // sends board_update message to all clients (ball position and paddles from all clients)
+                pressed_key = m.pressed_key;
+
+                update_paddle(&client_list, remote_addr_str, remote_port, ball, pressed_key);
+                send_board_update(sock_fd, remote_addr_str, remote_port, ball, client_list, n_clients);
                 break;
 
             case DISCONNECT:
