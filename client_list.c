@@ -77,7 +77,7 @@ void print_list(struct Node* node)
     while (node != NULL) {
 		printf("Address: %s\n", node->address);
         printf("Port: %d\n", node->port);
-        printf("Paddle (x,y): (%d,%d)\n\n", node->paddle.x, node->paddle.y);
+        //printf("Paddle (x,y): (%d,%d)\n\n", node->paddle.x, node->paddle.y);
         node = node->next;
     }
     printf("_______________Client List End_____________\n");
@@ -135,7 +135,7 @@ bool next_player(struct Node** head_ref, char player_address[], int player_port)
 
 /* Given a reference (pointer to pointer) to the head
    of a list and an int, appends a new node at the end  */
-void add_player_list(struct Paddle_Node** head_ref, paddle_position_t new_paddle, int player_score)
+void add_player_list(struct Paddle_Node** head_ref, paddle_position_t new_paddle, int player_score, bool current_player)
 {
     /* 1. allocate node */
     struct Paddle_Node* new_node = (struct Paddle_Node*) malloc(sizeof(struct Paddle_Node));
@@ -144,6 +144,7 @@ void add_player_list(struct Paddle_Node** head_ref, paddle_position_t new_paddle
     /* 2. put in the data  */
     new_node->paddle = new_paddle;
     new_node->player_score = player_score;
+    new_node->current_player = current_player;
 
     /* 3. This new node is going to be the last node, so make next
           of it as NULL*/// Internet domain sockets libraries
@@ -173,23 +174,29 @@ void update_paddle(struct Node** client_list, char remote_addr_str[], int remote
     paddle_position_t paddle;
 
     while (temp != NULL){
+        //printf("target addr and port: %s %d \n", remote_addr_str, remote_port);
+        //printf("current addr and port: %s %d\n", temp->address, temp->port);
+
         if(temp->port==remote_port && strcmp(temp->address, remote_addr_str)==0){
+
             paddle = temp->paddle;
+
             moove_paddle(&paddle, key);       // add function to check if it is a valid move (no collisions)
                                               // moove_paddle(CLIENTLIST, &paddle, key)
+            temp->paddle = paddle;
             return;
         }
+        temp = temp->next;
     }
     exit(0);      // add message error if client not found    
 }
 
-/*
-void draw_all_paddles(WINDOW *win, struct Node* client_list, int del){
-    struct Node* temp;
-    temp = client_list;
+
+void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, int del){
+    struct Paddle_Node* temp;
+    temp = paddle_list;
     while (temp != NULL) {
-        //draw_paddle(win, temp->paddle, true);
+        draw_paddle(win, &(temp->paddle), temp->current_player, del);
         temp = temp->next;
     }
 }
-*/

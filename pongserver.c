@@ -34,7 +34,6 @@ void send_board_update(int sock_fd, char addr[], int port, ball_position_t ball,
     m.ball_position = ball;
     m.number_clients = n_clients;
 
-    printf("\n ball x: %d n_clients: %d", m.ball_position.x, m.number_clients);
     nbytes = sendto(sock_fd, &m, sizeof(struct message), 0,
                 (const struct sockaddr *) &player_addr, player_addr_size);
 
@@ -43,7 +42,12 @@ void send_board_update(int sock_fd, char addr[], int port, ball_position_t ball,
     for(int i=0; i<n_clients; i++){
         paddle_m.paddle_position = client_list->paddle;
         paddle_m.player_score = client_list->player_score;
-        printf("\n x: %d score: %d", paddle_m.paddle_position.x, paddle_m.player_score);
+        paddle_m.current_player = false;
+
+
+        if(client_list->port==port && strcmp(client_list->address, addr)==0){
+            paddle_m.current_player = true;
+        }
 
         nbytes = sendto(sock_fd, &paddle_m, sizeof(struct paddle_position_message), 0,
                 (const struct sockaddr *) &player_addr, player_addr_size);
@@ -165,10 +169,21 @@ int main()
             case PADDLE_MOVE:
                 // calculates new paddle position, updates the ball
                 // sends board_update message to all clients (ball position and paddles from all clients)
+                
                 pressed_key = m.pressed_key;
 
+                /* BALL MOVEMENT (from the paper)
+                "The ball should move (following the code in the provided skeleton) after every n
+                Paddle_move messages received from the clients (where n is the number of connected
+                clients)"    - dont quite understand this
+                */
+
+                printf("Paddle_Move message received (pressed key: %d)\n", pressed_key);
                 update_paddle(&client_list, remote_addr_str, remote_port, ball, pressed_key);
+
                 send_board_update(sock_fd, remote_addr_str, remote_port, ball, client_list, n_clients);
+
+
                 break;
 
             case DISCONNECT:

@@ -1,16 +1,17 @@
 #include "visualization.h"
 
 // Creates a new paddle
-// to do: make it random; make function to verify it is a valid position e.g: no paddles or ball in the same position, no crossing edges of window
+// to do: correct rand position; make function verify it is a valid position e.g: no paddles or ball in the same position, no crossing edges of window
 void new_paddle (paddle_position_t * paddle, int legth){
-    paddle->x = WINDOW_SIZE/2;
-    paddle->y = WINDOW_SIZE-2;
+    paddle->x = rand() % (WINDOW_SIZE-2);                       // correct this,
+    paddle->y = rand() % (WINDOW_SIZE-2);
     paddle->length = legth;
     printf("NEW paddle x: %d y: %d ", paddle->x, paddle->y);
 }
 
 // Moves the paddle (update its position)
 void moove_paddle (paddle_position_t * paddle, int direction){
+
     if (direction == KEY_UP){
         if (paddle->y  != 1){
             paddle->y --;
@@ -34,12 +35,19 @@ void moove_paddle (paddle_position_t * paddle, int direction){
 
 
 // Draws the paddle on the screen
-void draw_paddle(WINDOW *win, paddle_position_t * paddle, int del){
+void draw_paddle(WINDOW *win, paddle_position_t * paddle, bool local_player, int del){
     int ch;
     if(del){
-        ch = '_';
+        if (local_player)
+        {
+            ch = '=';
+        }
+        else{
+            ch = '_';
+        }
+
     }else{
-        ch = ' ';
+        ch = ' ';           // not working, try change to 'A' and see what happens; it is being overwritten
     }
     int start_x = paddle->x - paddle->length;
     int end_x = paddle->x + paddle->length;
@@ -49,6 +57,7 @@ void draw_paddle(WINDOW *win, paddle_position_t * paddle, int del){
     }
     wrefresh(win);
 }
+// draw_all_paddles() on client_list.c because of dependencies
 
 // Creates a new ball (places it randomly on the screen)
 void place_ball_random(ball_position_t * ball){
