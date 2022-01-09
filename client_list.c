@@ -166,12 +166,50 @@ void add_player_list(struct Paddle_Node** head_ref, paddle_position_t new_paddle
     return;
 }
 
+// TO DO: PUT THIS FUNCTION ON VISUALIZATION.C FILE (DEPENDENCIES ERROR i believe)
+// check if new paddle position coincides with any of other players paddle
+bool paddle_hit_paddle(paddle_position_t new_paddle_position, struct Node* client_list, char player_address[], int player_port){
+    
+    struct Node* temp;
+    temp = client_list;
+
+    int start_x = new_paddle_position.x - new_paddle_position.length;
+    int end_x = new_paddle_position.x + new_paddle_position.length;
+    
+    int rival_start_x;
+    int rival_end_x;
+    while(temp!=NULL){
+        
+        // Check if the current node is the one refering to the active player (ignore in this case)
+        if(strcmp(temp->address, player_address)==0 && temp->port == player_port){
+            temp = temp->next;
+            continue;
+        }
+        
+        // Check if y positions of the active player and the other clients are the same
+        if(new_paddle_position.y == temp->paddle.y){
+            rival_start_x = temp->paddle.x - temp->paddle.length;
+            rival_end_x = temp->paddle.x + temp->paddle.length;
+
+            // check if the other player paddle is respectively on the left or on the right of the new position or coincides with it (assumes all paddle with same length)
+            if( (rival_end_x >= start_x  && rival_start_x < start_x)  || (rival_start_x <= end_x && rival_end_x>end_x) || (rival_start_x==start_x && rival_end_x==end_x) ){
+                return true;
+            }
+
+        }
+        temp = temp->next;
+    }
+
+    return false;
+}
+    
 
 // Updates the client list with the new paddle position of the player
 void update_paddle(struct Node** client_list, char remote_addr_str[], int remote_port, ball_position_t ball, int key)
 {
     struct Node *temp = *client_list;
     paddle_position_t paddle;
+    paddle_position_t previous_position;
 
     while (temp != NULL){
         //printf("target addr and port: %s %d \n", remote_addr_str, remote_port);
@@ -180,10 +218,19 @@ void update_paddle(struct Node** client_list, char remote_addr_str[], int remote
         if(temp->port==remote_port && strcmp(temp->address, remote_addr_str)==0){
 
             paddle = temp->paddle;
+            previous_position = temp->paddle;
 
-            moove_paddle(&paddle, key);       // add function to check if it is a valid move (no collisions)
-                                              // moove_paddle(CLIENTLIST, &paddle, key)
-            temp->paddle = paddle;
+            moove_paddle(&paddle, key);
+                                              
+            // check if new position collides with any of the other player's paddles
+            // if it does, the paddle doesn't move
+            if(paddle_hit_paddle(paddle, *client_list, remote_addr_str, remote_port)){
+                temp->paddle = previous_position;
+            }
+            // otherwise the new paddle position is updated to the list
+            else{
+                temp->paddle = paddle;
+            }
             return;
         }
         temp = temp->next;
@@ -200,3 +247,5 @@ void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, int del){
         temp = temp->next;
     }
 }
+
+

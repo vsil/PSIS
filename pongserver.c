@@ -157,7 +157,7 @@ int main()
                 }
 
                 //random initialization of paddle position
-                new_paddle(&paddle, PADDLE_SIZE);                   // MAKE THIS FUNC RANDOM
+                new_paddle(&paddle, PADDLE_SIZE);                   
                 
 			    //adicionar cliente â lista
 			    add_client(&client_list, remote_addr_str, remote_port, paddle);
@@ -180,6 +180,8 @@ int main()
 
                 printf("Paddle_Move message received (pressed key: %d)\n", pressed_key);
                 update_paddle(&client_list, remote_addr_str, remote_port, ball, pressed_key);
+                //moove_ball(&ball);
+                //paddle_hit_ball(&ball, &paddle);
 
                 send_board_update(sock_fd, remote_addr_str, remote_port, ball, client_list, n_clients);
 

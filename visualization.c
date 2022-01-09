@@ -129,3 +129,5 @@ void paddle_hit_ball(ball_position_t * ball, paddle_position_t * paddle){
         }
     }
 }
+
+
