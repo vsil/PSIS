@@ -34,6 +34,29 @@ void add_client(struct Node** head_ref, char new_address[], int new_port, paddle
     return;
 }
 
+address add_client_from_waiting_list(struct Node** head_client_list, struct Node** head_waiting_list){
+
+    struct Node *temp = *head_waiting_list;
+    paddle_position_t paddle;
+    address player_waiting_addr;
+
+    strcpy(player_waiting_addr.addr, temp->address);
+    player_waiting_addr.port = temp->port;
+
+    //random initialization of paddle position
+    new_paddle(&paddle, PADDLE_SIZE);
+    //check if new paddle position collides with any of the other clients                   
+    while(paddle_hit_paddle(paddle, *head_client_list, temp->address, temp->port)){
+        new_paddle(&paddle, PADDLE_SIZE);
+    }    
+
+    add_client(head_client_list, temp->address, temp->port, paddle);
+    delete_client(&temp, temp->address, temp->port);
+    return player_waiting_addr;
+}
+
+
+
 void delete_client(struct Node** head_ref, char delete_address[], int delete_port)
 {
     // Store head node

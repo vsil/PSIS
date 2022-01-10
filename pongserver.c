@@ -40,6 +40,7 @@ void send_board_update(int sock_fd, char addr[], int port, ball_position_t ball,
     // go through client list and send to the client the paddle info of each player
     // client builds a paddle list with this information
     for(int i=0; i<n_clients; i++){
+
         paddle_m.paddle_position = client_list->paddle;
         paddle_m.player_score = client_list->player_score;
         paddle_m.current_player = false;
@@ -115,6 +116,7 @@ int main()
 	char buffer[100];
 	int nbytes;
 	struct Node* client_list = NULL;
+    struct Node* waiting_list = NULL;
 	struct message m;
 
 	struct sockaddr_in client_addr;
@@ -143,7 +145,7 @@ int main()
         switch(m.command){
 
             case CONNECT:
-                n_clients++;
+                
                 printf("connection message detected!\n");
 
                 if(n_clients == 1){
@@ -151,14 +153,22 @@ int main()
                     place_ball_random(&ball);
                 }
 
-                else if(n_clients>10){
-                    printf("Maximum number of clients reached");
-                    break;                                          // check if this workd
+                else if(n_clients>MAX_CLIENTS-1){
+                    printf("Maximum number of clients reached\n Client added to the waiting list");
+
+                    add_client(&waiting_list, remote_addr_str, remote_port, paddle);  // adds client to waiting list (argument paddle is ignored)
+                    break;                                          
                 }
 
+                n_clients++;
+
                 //random initialization of paddle position
-                new_paddle(&paddle, PADDLE_SIZE);                   
-                
+                new_paddle(&paddle, PADDLE_SIZE);
+                //check if new paddle position collides with any of the other clients                   
+                while(paddle_hit_paddle(paddle, client_list, remote_addr_str, remote_port)){
+                    new_paddle(&paddle, PADDLE_SIZE);
+                }
+
 			    //adicionar cliente â lista
 			    add_client(&client_list, remote_addr_str, remote_port, paddle);
 
@@ -189,10 +199,18 @@ int main()
                 break;
 
             case DISCONNECT:
+
+                printf("disconnection message detected!\n");
                 n_clients--;
-                printf("disconnection message detected!\n");     
-                printf("deleting player %s with port: %d \n", remote_addr_str, remote_port);
 		        delete_client(&client_list, remote_addr_str, remote_port);
+                
+                if(waiting_list!=NULL){
+                    address player_waiting_addr;
+                    player_waiting_addr = add_client_from_waiting_list(&client_list, &waiting_list);
+                    n_clients++;
+                    send_board_update(sock_fd, player_waiting_addr.addr, player_waiting_addr.port, ball, client_list, n_clients);
+                }
+
 				if (next_player(&client_list, remote_addr_str, remote_port))
 							//send_play_message(sock_fd, next_player_address, next_player_port);
                 break;

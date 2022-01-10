@@ -4,6 +4,7 @@
 /* change window and paddle size */
 #define WINDOW_SIZE 35
 #define PADDLE_SIZE 3
+#define MAX_CLIENTS 2
 
 WINDOW * message_win;
 
@@ -21,6 +22,10 @@ typedef struct paddle_position_t{
     int length;
 } paddle_position_t;
 
+typedef struct address{
+    char addr[100];
+    int port;
+}address;
 
 /* Functions */
 void new_paddle (paddle_position_t * paddle, int legth);
