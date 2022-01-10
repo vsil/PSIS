@@ -12,6 +12,28 @@
 #include "sock_dg_inet.h"
 
 
+void send_wait_list_message(int sock_fd, char addr[], int port, int n_clients){
+
+    int nbytes;
+    message m;
+
+    struct sockaddr_in player_addr;
+    socklen_t player_addr_size = sizeof(struct sockaddr_in);  
+
+    player_addr.sin_family = AF_INET;    // INET domain
+    player_addr.sin_port = htons(port);
+    if( inet_pton(AF_INET, addr, &player_addr.sin_addr) < 1){
+        printf("no valid address: \n");
+        exit(-1);
+    }
+
+    // create general message 
+    m.command = WAIT_LIST;
+    m.number_clients = n_clients;
+    printf("\n waiting clients: %d", m.number_clients);                         //// CHECK IF THIS IS BEING SENT
+    nbytes = sendto(sock_fd, &m, sizeof(struct message), 0,
+                (const struct sockaddr *) &player_addr, player_addr_size);
+}
 
 void send_board_update(int sock_fd, char addr[], int port, ball_position_t ball, struct Node* client_list, int n_clients){
 
@@ -57,37 +79,6 @@ void send_board_update(int sock_fd, char addr[], int port, ball_position_t ball,
     }
 }
 
-
-void send_move_message(int sock_fd, struct Node** head_ref, char player_address[], int player_port, ball_position_t ball){
-
-    int nbytes;
-    struct message m;
-    struct sockaddr_in player_addr;
-    socklen_t player_addr_size = sizeof(struct sockaddr_in);  
-
-    /* Message to be sent */
-    //m.command = MOVE;
-    m.ball_position = ball;
-
-    // Store head node
-    struct Node *temp = *head_ref;
-
-    while (temp != NULL){
-        if(!(temp->port==player_port && strcmp(temp->address, player_address)==0)){
-            player_addr.sin_family = AF_INET;    // INET domain
-            player_addr.sin_port = htons(temp->port);
-            if( inet_pton(AF_INET, temp->address, &player_addr.sin_addr) < 1){
-                printf("no valid address: \n");
-                exit(-1);
-            }
-            nbytes = sendto(sock_fd, &m, sizeof(struct message), 0,
-                (const struct sockaddr *) &player_addr, player_addr_size);
-        }
-        temp = temp->next;
-    }
-}
-
-
 int main()
 {
     // Create an internet domain datagram socket
@@ -123,6 +114,7 @@ int main()
 	socklen_t client_addr_size = sizeof(struct sockaddr_in);
 
     int n_clients = 0;
+    int n_waiting_list = 0;
 
     // Initialize paddle position and ball position variables
 	paddle_position_t paddle;
@@ -155,7 +147,10 @@ int main()
 
                 else if(n_clients>MAX_CLIENTS-1){
                     printf("Maximum number of clients reached\n Client added to the waiting list");
+                    
 
+                    send_wait_list_message(sock_fd, remote_addr_str, remote_port, n_waiting_list);
+                    n_waiting_list++;
                     add_client(&waiting_list, remote_addr_str, remote_port, paddle);  // adds client to waiting list (argument paddle is ignored)
                     break;                                          
                 }
@@ -207,6 +202,7 @@ int main()
                 if(waiting_list!=NULL){
                     address player_waiting_addr;
                     player_waiting_addr = add_client_from_waiting_list(&client_list, &waiting_list);
+                    n_waiting_list--;
                     n_clients++;
                     send_board_update(sock_fd, player_waiting_addr.addr, player_waiting_addr.port, ball, client_list, n_clients);
                 }

@@ -10,7 +10,7 @@
 
 
 /* List of commands */
-typedef enum command_t {CONNECT, BOARD_UPDATE, PADDLE_MOVE, DISCONNECT} command_t;
+typedef enum command_t {CONNECT, BOARD_UPDATE, PADDLE_MOVE, DISCONNECT, WAIT_LIST} command_t;
 
 /* Message definition */
 typedef struct message

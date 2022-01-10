@@ -81,12 +81,21 @@ int main(int argc, char *argv[]) {
 
 	// receives general message
 	nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
-	ball = m.ball_position;
 	n_clients = m.number_clients;
 
-	// receives paddle_position_message and updates Paddle_List with player information
-	update_player_positions(sock_fd, &Paddle_List, n_clients);	 
+	if (m.command==WAIT_LIST)
+	{
+		printf("\nServer is full. You have been added to the waiting list");
+		printf("\n%d players in front of you\n", n_clients);
+		nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
+	}
 	
+	if(m.command==BOARD_UPDATE){
+		ball = m.ball_position;
+
+		// receives paddle_position_message and updates Paddle_List with player information
+		update_player_positions(sock_fd, &Paddle_List, n_clients);	 
+	}
 
 	// Curses mode
 	initscr();		    	/* Start curses mode 		*/
