@@ -71,6 +71,7 @@ void delete_client(struct Node** head_ref, char delete_address[], int delete_por
 
 void print_list(struct Node* node)
 {
+    // Print the client list 
 	printf("______________Client List Start____________\n");
     while (node != NULL) {
 		printf("Address: %s\n", node->address);
@@ -81,35 +82,38 @@ void print_list(struct Node* node)
 }
 
 bool next_player(struct Node** head_ref, char player_address[], int player_port){
-   
+
+   // Function that points to the next client on the client list
+   // Receives the client clist and the current client adress and port
+   // Returns a boolean that tells wheter or not the list is empty
+
    struct Node *temp = *head_ref;
    struct Node *next_player;
    struct Node *first_node = *head_ref;
 
-//    int next_player_port;
-//    char next_player_address[100];
-
+    // If the list is empty
     if (*head_ref == NULL){
         printf("No players present \n");
         return false;
     }
 
     while (temp->next != NULL) {
-
+        // Runs through the client list.  If the current client was 
+        // found, exit the loop
         if(strcmp(temp->address, player_address)==0 && temp->port == player_port){
             break;
         }
         temp = temp->next;
     }
  
-    // If key was not present in linked list
+    // If the client is not present in the list
     if (temp == NULL){
 		printf("Player not found \n");
         return false;
     }
 
     if (temp->next==NULL){
-        // if the current player is the last on the list (including the case where it is the only client of the list),
+        // If the current player is the last on the list (including the case where it is the only client of the list),
         // send to the first player of the list
 
         next_player_port = first_node->port;
@@ -123,7 +127,4 @@ bool next_player(struct Node** head_ref, char player_address[], int player_port)
         strcpy(next_player_address, next_player->address);
         return true;
     }
-    // st->next_player_address = d;
-    // st->next_player_port = m;
-    //send_play_message(sock_fd, next_player_address, next_player_port);
 }

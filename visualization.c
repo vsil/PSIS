@@ -94,17 +94,17 @@ void draw_ball(WINDOW *win, ball_position_t * ball, int draw){
     wrefresh(win);
 }
 
-// Update the ball movement when it is hit by the paddle
+// Updates the ball movement when it is hit by the paddle or vice-versa
 void paddle_hit_ball(ball_position_t * ball, paddle_position_t * paddle){
     
     int start_x = paddle->x - paddle->length;
     int end_x = paddle->x + paddle->length;
-    // Check if y positions are the same
+    // Checks if y positions are the same (same row)
     if (ball->y == paddle->y){
-        // Run through the whole length of the paddle
+        // Runs through the whole length of the paddle
         for (int i = start_x; i <= end_x; i++){
+            // If the ball x positions coincides with the paddle
             if (ball->x == i){
-                // (ball->up_hor_down == 0) ? (ball->up_hor_down = 1) : (ball->up_hor_down *= -1);
                 if (ball->up_hor_down == 0){
                     do{
                         ball->up_hor_down = rand() % 3 -1;

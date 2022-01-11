@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include <ncurses.h>
+#include <ncurses.h> 
 
 /* change window and paddle size */
 #define WINDOW_SIZE 35

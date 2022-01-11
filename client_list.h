@@ -13,7 +13,7 @@ struct Node {
     struct Node* next;
 };
 
-// Next player
+// Next player variables
 int next_player_port;
 char next_player_address[100];
 bool is_next_player;

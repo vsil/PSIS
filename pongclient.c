@@ -13,15 +13,16 @@
 #include <time.h>
 
 // Include header files
-#include "pong.h" 			// visualization already included here
+#include "pong.h" 			
 #include "sock_dg_inet.h"
 
 
 int main(int argc, char *argv[]) {
  
-	// Create an internet domain datagram socket
+	// Create an internet domain datagram socket (ipv4)
 	int sock_fd;
-	sock_fd= socket(AF_INET, SOCK_DGRAM, 0);
+	sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+	// Error handling
 	if (sock_fd == -1){
 		perror("socket: ");
 		exit(-1);
@@ -48,10 +49,14 @@ int main(int argc, char *argv[]) {
 	// Initialize message
 	struct message m;
 
-	// send connection message
+	// Send connection message
 	m.command = CONNECT;
-	sendto(sock_fd, &m, sizeof(struct message), 0, 
+	int nbytes;
+	nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
 			(const struct sockaddr *)&server_addr, sizeof(server_addr));
+	// Error handling (returns -1 if there is an error)
+    if (nbytes < 0)
+        printf("Error sending the message to the server \n");
 
 	// Initialize paddle position and ball position variables
 	paddle_position_t paddle;
@@ -81,8 +86,8 @@ int main(int argc, char *argv[]) {
     place_ball_random(&ball);
     draw_ball(my_win, &ball, true);
 
-	bool play_state = false; // Initialize play_state boolean
-	int key;				 // Read from keyboard
+	bool play_state = false; 	// Initialize play_state boolean
+	int key;				 	// Read from keyboard
 
 	/* Clock variables */
 	time_t begin; 
@@ -93,8 +98,11 @@ int main(int argc, char *argv[]) {
 
 	while(1){
 
-		// Wait for a message
-		recv(sock_fd, &m, sizeof(struct message), 0);
+		// Wait for a message from the server
+		nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
+		// Error handling
+		if (nbytes <= 0)
+            printf("Error receiving the message from the server \n");
 
 		// If a Move_ball message is received
 		if(m.command == MOVE){
@@ -103,7 +111,7 @@ int main(int argc, char *argv[]) {
 			mvwprintw(message_win, 1,1,"WAITING STATE");
 			mvwprintw(message_win, 2,1,"%s",clear);
 			mvwprintw(message_win, 3,1,"%s",clear);
-			/*Update ball */
+			/* Update ball position */
 			ball = m.ball_position;
             draw_ball(my_win, &ball, false);
             moove_ball(&ball);
@@ -122,10 +130,11 @@ int main(int argc, char *argv[]) {
 
 		while(play_state){
 			
+			/* Read key from keyboard */
 			key = wgetch(my_win);
 
 			/* Check time spent and print it */
-			time_spent = (double)(time(NULL) - begin);
+			time_spent = (double)(time(NULL) - begin); 	// Wallclock time
 			mvwprintw(message_win, 1,22,"Time spent: %f",time_spent);
 			mvwprintw(message_win, 3,1,"%s",clear);
 
@@ -143,17 +152,24 @@ int main(int argc, char *argv[]) {
 				draw_ball(my_win, &ball, false);
 				paddle_hit_ball(&ball, &paddle);
 				draw_ball(my_win, &ball, true);
-				/* Send Move_ball message to the server */
+				/* Send MOVE message to the server */
 				m.command = MOVE;
 				m.ball_position = ball;
-				sendto(sock_fd, &m, sizeof(struct message), 0, 
+				nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
 					(const struct sockaddr *)&server_addr, sizeof(server_addr));
-        	}
+				// Error handling (returns -1 if there is an error)
+    			if (nbytes < 0)
+        			printf("Error sending the message to the server \n");
+			}
 			else if (key == 'r' && time_spent >= 10){
 				play_state = false; 	// go back to waiting state
+				/* Send RELEASE message to the server */
 				m.command = RELEASE;
-				sendto(sock_fd, &m, sizeof(struct message), 0, 
+				nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
 					(const struct sockaddr *)&server_addr, sizeof(server_addr));
+				// Error handling (returns -1 if there is an error)
+    			if (nbytes < 0)
+        			printf("Error sending the message to the server \n");
 				/* Print new messages to the text display*/
 				mvwprintw(message_win, 1,1,"%s",clear);
 				mvwprintw(message_win, 1,1,"WAITING STATE");
@@ -161,18 +177,24 @@ int main(int argc, char *argv[]) {
 				mvwprintw(message_win, 3,1,"%s",clear);
 			}
 			else if(key == 'q'){
+				/* Send DISCONNECT message to the server */
 				m.command = DISCONNECT;
-				sendto(sock_fd, &m, sizeof(struct message), 0, 
+				nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
 					(const struct sockaddr *)&server_addr, sizeof(server_addr));
+				// Error handling (returns -1 if there is an error)
+    			if (nbytes < 0)
+        			printf("Error sending the message to the server \n");
+				// Closes the socket and terminates the client
 				close(sock_fd);
 				system("clear");
 				exit(0);
-			}
 			
+			}
 			mvwprintw(message_win, 2,29,"%c key pressed", key);
         	wrefresh(message_win);
 		}
 	}
+	// Closes the socket and terminates the client
 	close(sock_fd);
 	system("clear");
 	exit(0);
