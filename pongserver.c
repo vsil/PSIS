@@ -115,6 +115,7 @@ int main()
 
     int n_clients = 0;
     int n_waiting_list = 0;
+    int n_ball_turn = 0;
 
     // Initialize paddle position and ball position variables
 	paddle_position_t paddle;
@@ -140,15 +141,14 @@ int main()
                 
                 printf("connection message detected!\n");
 
-                if(n_clients == 1){
+                if(n_clients == 0){
                     //random initialization of ball position
                     place_ball_random(&ball);
                 }
 
                 else if(n_clients>MAX_CLIENTS-1){
                     printf("Maximum number of clients reached\n Client added to the waiting list");
-                    
-
+                
                     send_wait_list_message(sock_fd, remote_addr_str, remote_port, n_waiting_list);
                     n_waiting_list++;
                     add_client(&waiting_list, remote_addr_str, remote_port, paddle);  // adds client to waiting list (argument paddle is ignored)
@@ -175,21 +175,21 @@ int main()
                 // calculates new paddle position, updates the ball
                 // sends board_update message to all clients (ball position and paddles from all clients)
                 
+                
                 pressed_key = m.pressed_key;
+                printf("paddle move message detected");
 
-                /* BALL MOVEMENT (from the paper)
-                "The ball should move (following the code in the provided skeleton) after every n
-                Paddle_move messages received from the clients (where n is the number of connected
-                clients)"    - dont quite understand this
-                */
-
-                printf("Paddle_Move message received (pressed key: %d)\n", pressed_key);
                 update_paddle(&client_list, remote_addr_str, remote_port, ball, pressed_key);
-                //moove_ball(&ball);
-                //paddle_hit_ball(&ball, &paddle);
+
+                n_ball_turn++;
+                if(n_ball_turn==n_clients){
+                    // calculates new ball position every n PADDLE_MOVE messages
+                    moove_ball(&ball);
+                    paddle_hit_ball(&ball, &client_list);
+                    n_ball_turn=0;
+                }
 
                 send_board_update(sock_fd, remote_addr_str, remote_port, ball, client_list, n_clients);
-
 
                 break;
 
@@ -207,11 +207,9 @@ int main()
                     send_board_update(sock_fd, player_waiting_addr.addr, player_waiting_addr.port, ball, client_list, n_clients);
                 }
 
-				if (next_player(&client_list, remote_addr_str, remote_port))
-							//send_play_message(sock_fd, next_player_address, next_player_port);
                 break;
         }
-		print_list(waiting_list);
+		print_list(client_list);
     }
 
     close(sock_fd);

@@ -269,3 +269,34 @@ void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, int del){
 }
 
 
+// Update the ball movement when it is hit by the paddle; update player score
+void paddle_hit_ball(ball_position_t * ball, struct Node ** client_list){
+    
+    struct Node *temp = *client_list;
+    
+    while(temp!=NULL){
+        int start_x = temp->paddle.x - temp->paddle.length;
+        int end_x = temp->paddle.x + temp->paddle.length;
+
+        // Check if y positions are the same
+        if (ball->y == temp->paddle.y){
+            // Run through the whole length of the paddle
+            for (int i = start_x; i <= end_x; i++){
+                if (ball->x == i){
+                    temp->player_score++;
+                    printf("Player_score: %d \n", temp->player_score);
+                    if (ball->up_hor_down == 0){
+                        do{
+                            ball->up_hor_down = rand() % 3 -1;
+                        }while(ball->up_hor_down == 0);
+                    }
+                    else
+                        ball->up_hor_down *= -1;
+                    ball->y=ball->y + ball->up_hor_down;
+                }
+            }
+        }
+        temp = temp->next;
+    }
+}
+

@@ -57,7 +57,6 @@ void draw_paddle(WINDOW *win, paddle_position_t * paddle, bool local_player, int
     }
     wrefresh(win);
 }
-// draw_all_paddles() on client_list.c because of dependencies
 
 // Creates a new ball (places it randomly on the screen)
 void place_ball_random(ball_position_t * ball){
@@ -104,30 +103,6 @@ void draw_ball(WINDOW *win, ball_position_t * ball, int draw){
     wmove(win, ball->y, ball->x);
     waddch(win,ch);
     wrefresh(win);
-}
-
-// Update the ball movement when it is hit by the paddle
-void paddle_hit_ball(ball_position_t * ball, paddle_position_t * paddle){
-    
-    int start_x = paddle->x - paddle->length;
-    int end_x = paddle->x + paddle->length;
-    // Check if y positions are the same
-    if (ball->y == paddle->y){
-        // Run through the whole length of the paddle
-        for (int i = start_x; i <= end_x; i++){
-            if (ball->x == i){
-                // (ball->up_hor_down == 0) ? (ball->up_hor_down = 1) : (ball->up_hor_down *= -1);
-                if (ball->up_hor_down == 0){
-                    do{
-                        ball->up_hor_down = rand() % 3 -1;
-                    }while(ball->up_hor_down == 0);
-                }
-                else
-                    ball->up_hor_down *= -1;
-                ball->y=ball->y + ball->up_hor_down;
-            }
-        }
-    }
 }
 
 

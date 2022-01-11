@@ -2,7 +2,7 @@
 #include <ncurses.h>
 
 /* change window and paddle size */
-#define WINDOW_SIZE 35
+#define WINDOW_SIZE 25
 #define PADDLE_SIZE 3
 #define MAX_CLIENTS 10
 
@@ -34,4 +34,4 @@ void draw_paddle(WINDOW *win, paddle_position_t * paddle, bool local_player, int
 void place_ball_random(ball_position_t * ball);
 void moove_ball(ball_position_t * ball);
 void draw_ball(WINDOW *win, ball_position_t * ball, int draw);
-void paddle_hit_ball(ball_position_t * ball, paddle_position_t * paddle);
+//void paddle_hit_ball(ball_position_t * ball, struct Node * client_list);

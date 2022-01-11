@@ -119,11 +119,10 @@ int main(int argc, char *argv[]) {
     box(message_win, 0 , 0);	
 	wrefresh(message_win);
 
-	// Create and draw a paddle
-
+	// Draw the paddles
 	draw_all_paddles(my_win, Paddle_List, true);
 
-	// Draw the ball ball
+	// Draw the ball 
     draw_ball(my_win, &ball, true);
 
 
@@ -164,7 +163,6 @@ int main(int argc, char *argv[]) {
 		// Wait for a message
 		recv(sock_fd, &m, sizeof(struct message), 0);
 
-
 		// If a Board_update message is received
 		if(m.command == BOARD_UPDATE){
 
@@ -178,7 +176,7 @@ int main(int argc, char *argv[]) {
             draw_ball(my_win, &ball, true);			
 			draw_all_paddles(my_win, Paddle_List, true);
 
-			wrefresh(message_win);	
+			//wrefresh(message_win);	
 		}
 	}
 	close(sock_fd);
