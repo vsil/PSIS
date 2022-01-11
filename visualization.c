@@ -6,7 +6,7 @@ void new_paddle (paddle_position_t * paddle, int legth){
     paddle->x = rand() % (WINDOW_SIZE-2);                       // correct this, so that no paddle crosses the borders
     paddle->y = rand() % (WINDOW_SIZE-2);
     paddle->length = legth;
-    printf("NEW paddle x: %d y: %d ", paddle->x, paddle->y);
+    //printf("NEW paddle x: %d y: %d ", paddle->x, paddle->y);
 }
 
 // Moves the paddle (update its position)

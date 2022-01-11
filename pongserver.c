@@ -211,7 +211,7 @@ int main()
 							//send_play_message(sock_fd, next_player_address, next_player_port);
                 break;
         }
-		print_list(client_list);
+		print_list(waiting_list);
     }
 
     close(sock_fd);

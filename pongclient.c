@@ -85,8 +85,14 @@ int main(int argc, char *argv[]) {
 
 	if (m.command==WAIT_LIST)
 	{
-		printf("\nServer is full. You have been added to the waiting list");
-		printf("\n%d players in front of you\n", n_clients);
+		printf("\n Max capacity of the server has been reached (%d players)\n", MAX_CLIENTS);
+		if (n_clients==0)
+		{
+			printf("You are the first player in the waiting list\n");
+		}
+		else{
+			printf("There are currently %d players waiting in front of you\n", n_clients);
+		}
 		nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
 	}
 	

@@ -51,11 +51,9 @@ address add_client_from_waiting_list(struct Node** head_client_list, struct Node
     }    
 
     add_client(head_client_list, temp->address, temp->port, paddle);
-    delete_client(&temp, temp->address, temp->port);
+    delete_client(head_waiting_list, (*head_waiting_list)->address, (*head_waiting_list)->port);
     return player_waiting_addr;
 }
-
-
 
 void delete_client(struct Node** head_ref, char delete_address[], int delete_port)
 {
@@ -64,9 +62,8 @@ void delete_client(struct Node** head_ref, char delete_address[], int delete_por
  
     // If head node itself holds the key to be deleted
     if (temp != NULL && strcmp(temp->address, delete_address)==0 && temp->port == delete_port) {
-        // printf("eliminated first element\n");
         *head_ref = temp->next; // Changed head
-        free(temp); // free old head
+        free(temp); // free old 
         return;
     }
  

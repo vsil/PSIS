@@ -4,7 +4,7 @@
 /* change window and paddle size */
 #define WINDOW_SIZE 35
 #define PADDLE_SIZE 3
-#define MAX_CLIENTS 2
+#define MAX_CLIENTS 10
 
 WINDOW * message_win;
 
