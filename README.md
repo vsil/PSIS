@@ -18,8 +18,6 @@ NOTA/QUESTAO: devido à forma como o "recvfrom" funciona (é preciso especificar
 [to_do]:
 - remove extra balls that appear on the screen
 - improve padde_hit_ball function
-- add more comments to the code and refactor in some parts
-- double check if the command line IP input is working fine
 
 [to_compile_and_execute]:
 - run "make"
