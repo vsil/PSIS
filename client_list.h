@@ -64,7 +64,9 @@ void add_player_list(struct Paddle_Node** head_ref, paddle_position_t new_paddle
 void update_paddle(struct Node** client_list, char remote_addr_str[], int remote_port, ball_position_t ball, int key);
 
 // GRAPHICS
-void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, int del);
+void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, bool del);
 address add_client_from_waiting_list(struct Node** head_client_list, struct Node** head_waiting_list);
 bool paddle_hit_paddle(paddle_position_t new_paddle_position, struct Node* client_list, char player_address[], int player_port);
 void paddle_hit_ball(ball_position_t * ball, struct Node ** client_list);
+void print_paddle_list(struct Paddle_Node* node);
+void reset_list(struct Paddle_Node** head_ref);

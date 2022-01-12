@@ -25,6 +25,8 @@ void update_player_positions(int sock_fd, struct Paddle_Node** paddle_list, int 
 	int player_score;
 	bool current_player;
 
+	reset_list(paddle_list);
+
 	for(int i=0; i<n_clients; i++){
 		recv(sock_fd, &m_paddle, sizeof(struct paddle_position_message), 0);
 		paddle = m_paddle.paddle_position;
@@ -34,6 +36,26 @@ void update_player_positions(int sock_fd, struct Paddle_Node** paddle_list, int 
 		//printf("i: %d  x = %d", i, paddle.x);
 		add_player_list(paddle_list, paddle, player_score, current_player);	
 	}
+}
+
+void print_players_score(WINDOW * message_win, struct Paddle_Node* client_list, int n_clients){
+	int i=1;
+
+	message_win = newwin(n_clients+2, WINDOW_SIZE+10, WINDOW_SIZE, 0);
+    box(message_win, 0 , 0);
+
+
+	while(client_list!=NULL){
+		if(client_list->current_player){
+			mvwprintw(message_win, i,1,"P%d - %d <---", i, client_list->player_score);
+		}
+		else{
+			mvwprintw(message_win, i,1,"P%d - %d", i, client_list->player_score);
+		}
+		i++;
+		client_list = client_list->next;
+	}
+	wrefresh(message_win);
 }
 
 int main(int argc, char *argv[]) {
@@ -72,7 +94,6 @@ int main(int argc, char *argv[]) {
 			(const struct sockaddr *)&server_addr, sizeof(server_addr));
 
 
-	// receive the first Board_update message
 
 	int nbytes;
 	int n_clients;
@@ -175,8 +196,7 @@ int main(int argc, char *argv[]) {
 			update_player_positions(sock_fd, &Paddle_List, n_clients);	 
             draw_ball(my_win, &ball, true);			
 			draw_all_paddles(my_win, Paddle_List, true);
-
-			//wrefresh(message_win);	
+			print_players_score(message_win, Paddle_List, n_clients);	
 		}
 	}
 	close(sock_fd);

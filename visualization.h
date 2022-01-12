@@ -30,7 +30,7 @@ typedef struct address{
 /* Functions */
 void new_paddle (paddle_position_t * paddle, int legth);
 void moove_paddle (paddle_position_t * paddle, int direction);
-void draw_paddle(WINDOW *win, paddle_position_t * paddle, bool local_player, int del);
+void draw_paddle(WINDOW *win, paddle_position_t * paddle, bool local_player, bool del);
 void place_ball_random(ball_position_t * ball);
 void moove_ball(ball_position_t * ball);
 void draw_ball(WINDOW *win, ball_position_t * ball, int draw);

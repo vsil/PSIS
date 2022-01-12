@@ -35,7 +35,7 @@ void moove_paddle (paddle_position_t * paddle, int direction){
 
 
 // Draws the paddle on the screen
-void draw_paddle(WINDOW *win, paddle_position_t * paddle, bool local_player, int del){
+void draw_paddle(WINDOW *win, paddle_position_t * paddle, bool local_player, bool del){
     int ch;
     if(del){
         if (local_player)

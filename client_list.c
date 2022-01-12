@@ -103,6 +103,18 @@ void print_list(struct Node* node)
     printf("_______________Client List End_____________\n");
 }
 
+
+void print_paddle_list(struct Paddle_Node* node)
+{
+	printf("______________Client List Start____________\n");
+    while (node != NULL) {
+		printf("Paddle x: %d\n", node->paddle.x);
+        //printf("Paddle (x,y): (%d,%d)\n\n", node->paddle.x, node->paddle.y);
+        node = node->next;
+    }
+    printf("_______________Client List End_____________\n");
+}
+
 bool next_player(struct Node** head_ref, char player_address[], int player_port){
    
    struct Node *temp = *head_ref;
@@ -186,6 +198,27 @@ void add_player_list(struct Paddle_Node** head_ref, paddle_position_t new_paddle
     return;
 }
 
+
+/* Function to delete the entire linked list */
+void reset_list(struct Paddle_Node** head_ref)
+{
+ 
+    /* deref head_ref to get the real head */
+    struct Paddle_Node* current = *head_ref;
+    struct Paddle_Node* next = NULL;
+ 
+    while (current != NULL)
+    {
+        next = current->next;
+        free(current);
+        current = next;
+    }
+ 
+    /* deref head_ref to affect the real head back
+        in the caller. */
+    *head_ref = NULL;
+}
+
 // TO DO: PUT THIS FUNCTION ON VISUALIZATION.C FILE (DEPENDENCIES ERROR i believe)
 // check if new paddle position coincides with any of other players paddle
 bool paddle_hit_paddle(paddle_position_t new_paddle_position, struct Node* client_list, char player_address[], int player_port){
@@ -259,7 +292,7 @@ void update_paddle(struct Node** client_list, char remote_addr_str[], int remote
 }
 
 
-void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, int del){
+void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, bool del){
     struct Paddle_Node* temp;
     temp = paddle_list;
     while (temp != NULL) {
