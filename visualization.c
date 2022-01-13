@@ -1,10 +1,16 @@
 #include "visualization.h"
 
-// Creates a new paddle
-// to do: correct rand position; 
+// Creates a new paddle 
 void new_paddle (paddle_position_t * paddle, int length){
-    paddle->x = rand() % (WINDOW_SIZE-2);                         
-    paddle->y = rand() % (WINDOW_SIZE-2);
+    int start_x; int end_x;                  
+    do{
+        paddle->x = rand() % WINDOW_SIZE;
+        start_x = paddle->x - paddle->length;
+        end_x = paddle->x + paddle->length; 
+    }while(start_x <= 0 || end_x >= WINDOW_SIZE - 1);
+    do{
+        paddle->y = rand() % WINDOW_SIZE;
+    }while(paddle->y == 0 || paddle->y == WINDOW_SIZE - 1);
     paddle->length = length;
 }
 
@@ -32,7 +38,6 @@ void moove_paddle (paddle_position_t * paddle, int direction){
     }
 }
 
-
 // Draws the paddle on the screen
 void draw_paddle(WINDOW *win, paddle_position_t * paddle, bool local_player, bool del){
     int ch;
@@ -46,7 +51,7 @@ void draw_paddle(WINDOW *win, paddle_position_t * paddle, bool local_player, boo
         }
 
     }else{
-        ch = ' ';           // not working, try change to 'A' and see what happens; it is being overwritten
+        ch = ' '; 
     }
     int start_x = paddle->x - paddle->length;
     int end_x = paddle->x + paddle->length;
@@ -62,29 +67,29 @@ void place_ball_random(ball_position_t * ball){
     ball->x = rand() % WINDOW_SIZE ;
     ball->y = rand() % WINDOW_SIZE ;
     ball->c = 'o';
-    ball->up_hor_down = rand() % 3 -1; //  -1 up, 1 - down
-    ball->left_ver_right = rand() % 3 -1 ; // 0 vertical, -1 left, 1 right
+    ball->up_hor_down = rand() % 3 -1;              //  -1 up, 1 - down
+    ball->left_ver_right = rand() % 3 -1 ;          // 0 vertical, -1 left, 1 right
 }
 
 // Moves the ball (update its position)
 void moove_ball(ball_position_t * ball){
     
     int next_x = ball->x + ball->left_ver_right;
+
     if( next_x == 0 || next_x == WINDOW_SIZE-1){
         ball->up_hor_down = rand() % 3 -1 ;
         ball->left_ver_right *= -1;
-        mvwprintw(message_win, 3,1,"left right win");
+        mvwprintw(message_win, 3,1,"left right win");               //THIS IS NOT USED, SHOULD BE DELETED RIGHT?
         wrefresh(message_win);
-     }else{
+    }else{
         ball->x = next_x;
     }
 
-    
     int next_y = ball->y + ball->up_hor_down;
     if( next_y == 0 || next_y == WINDOW_SIZE-1){
         ball->up_hor_down *= -1;
         ball->left_ver_right = rand() % 3 -1;
-        mvwprintw(message_win, 3,1,"bottom top win");
+        mvwprintw(message_win, 3,1,"bottom top win");               //THIS IS NOT USED, SHOULD BE DELETED RIGHT?
         wrefresh(message_win);
     }else{
         ball -> y = next_y;
@@ -103,5 +108,3 @@ void draw_ball(WINDOW *win, ball_position_t * ball, int draw){
     waddch(win,ch);
     wrefresh(win);
 }
-
-

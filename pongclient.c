@@ -13,11 +13,10 @@
 #include <time.h>
 
 // Include header files
-#include "client_list.h" 		
+#include "client_list.h" 			// visualization.h already included here
 #include "sock_dg_inet.h"
 
-
-// receives player paddles and scores from the server, adds them to Paddle_List
+// receives all the player paddles and scores from the server, adds them to local client paddle_list
 void update_player_positions(int sock_fd, struct Paddle_Node** paddle_list, int n_clients)
 {
 	paddle_position_message m_paddle;
@@ -25,27 +24,26 @@ void update_player_positions(int sock_fd, struct Paddle_Node** paddle_list, int 
 	int player_score;
 	bool current_player;
 
-	reset_list(paddle_list);
+	reset_list(paddle_list);			// frees memory from the list used in the previous round
 
-	for(int i=0; i<n_clients; i++){
+	for(int i=0; i<n_clients; i++){		// receives one paddle_position_message per client
 		recv(sock_fd, &m_paddle, sizeof(struct paddle_position_message), 0);
 		paddle = m_paddle.paddle_position;
 		player_score = m_paddle.player_score;
 		current_player = m_paddle.current_player;
 
-		//printf("i: %d  x = %d", i, paddle.x);
-		add_player_list(paddle_list, paddle, player_score, current_player);	
+		add_player_list(paddle_list, paddle, player_score, current_player);	  // adds new information to paddle_list
 	}
 }
 
+// prints players scores on the message_window
 void print_players_score(WINDOW * message_win, struct Paddle_Node* client_list, int n_clients){
+	
 	int i=1;
-
 	message_win = newwin(n_clients+2, WINDOW_SIZE+10, WINDOW_SIZE, 0);
     box(message_win, 0 , 0);
 
-
-	while(client_list!=NULL){
+	while(client_list!=NULL){		// goes through client_list and prints players scores
 		if(client_list->current_player){
 			mvwprintw(message_win, i,1,"P%d - %d <---", i, client_list->player_score);
 		}
@@ -63,7 +61,6 @@ int main(int argc, char *argv[]) {
 	// Create an internet domain datagram socket
 	int sock_fd;
 	sock_fd= socket(AF_INET, SOCK_DGRAM, 0);
-	// Error handling
 	if (sock_fd == -1){
 		perror("socket: ");
 		exit(-1);
@@ -87,16 +84,14 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	// Send connection message
-	message m;
+	// send connection message
+	struct message m;
 	m.command = CONNECT;
+
+	sendto(sock_fd, &m, sizeof(struct message), 0, 
+			(const struct sockaddr *)&server_addr, sizeof(server_addr));
+
 	int nbytes;
-	nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
-				(const struct sockaddr *)&server_addr, sizeof(server_addr));
-	if (nbytes < 0)
-		printf("Error sending the message to the server \n");
-
-
 	int n_clients;
 	ball_position_t ball;
 	struct Paddle_Node* Paddle_List = NULL; 
@@ -105,7 +100,8 @@ int main(int argc, char *argv[]) {
 	nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
 	n_clients = m.number_clients;
 
-	if (m.command == WAIT_LIST)
+	// the server has reached full capacity, shows client waiting message
+	if (m.command==WAIT_LIST)
 	{
 		printf("\n Max capacity of the server has been reached (%d players)\n", MAX_CLIENTS);
 		if (n_clients==0)
@@ -118,10 +114,10 @@ int main(int argc, char *argv[]) {
 		nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
 	}
 	
-	if(m.command == BOARD_UPDATE){
+	// receives board_update message
+	if(m.command==BOARD_UPDATE){
 		ball = m.ball_position;
-
-		// receives paddle_position_message and updates Paddle_List with player information
+		// receives paddle_position_message and updates local paddle_list with player information
 		update_player_positions(sock_fd, &Paddle_List, n_clients);	 
 	}
 
@@ -136,10 +132,6 @@ int main(int argc, char *argv[]) {
     box(my_win, 0 , 0);	
 	wrefresh(my_win);
     keypad(my_win, true);
-    /* creates a window and draws a border */
-    message_win = newwin(5, WINDOW_SIZE+10, WINDOW_SIZE, 0);
-    box(message_win, 0 , 0);	
-	wrefresh(message_win);
 
 	// Draw the paddles
 	draw_all_paddles(my_win, Paddle_List, true);
@@ -147,14 +139,15 @@ int main(int argc, char *argv[]) {
 	// Draw the ball 
     draw_ball(my_win, &ball, true);
 
+	// Prints players scores
+	print_players_score(message_win, Paddle_List, n_clients);
 
-	int key;				 // Read from keyboard
-
-	/* Clear string */
-	char clear[] = "                                          ";		
+	int key;				// Read from keyboard
+	char clear[] = "                                          ";	// Clear string 	
 
 	while(1){
 
+		/* gets user input */
 		while(!(key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN || key == 'q')){
 			key = wgetch(my_win);	
 		}
@@ -165,21 +158,21 @@ int main(int argc, char *argv[]) {
 			/* Send Paddle_move message to the server */
 			m.command = PADDLE_MOVE;
 			m.pressed_key = key;
-
 			sendto(sock_fd, &m, sizeof(struct message), 0, 
 				(const struct sockaddr *)&server_addr, sizeof(server_addr));
 		}
+
 		else if(key == 'q'){
+			/* Send disconnect message to the server, closes socket and exits application */
 			m.command = DISCONNECT;
 			sendto(sock_fd, &m, sizeof(struct message), 0, 
 				(const struct sockaddr *)&server_addr, sizeof(server_addr));
-			// CLoses the socket and terminates the client
 			close(sock_fd);
 			system("clear");
 			exit(0);
 		}
 
-		key = 0;
+		key = 0; // resets user key
 				
 		// Wait for a message
 		recv(sock_fd, &m, sizeof(struct message), 0);
@@ -188,15 +181,19 @@ int main(int argc, char *argv[]) {
 		if(m.command == BOARD_UPDATE){
 
 			draw_ball(my_win, &ball, false);	
-			draw_all_paddles(my_win, Paddle_List, false);					// not working ????
+			draw_all_paddles(my_win, Paddle_List, false);	// clears previous round paddles and ball
 
-			ball = m.ball_position;
+			ball = m.ball_position;							// updates ball information
 			n_clients = m.number_clients;
 
-			update_player_positions(sock_fd, &Paddle_List, n_clients);	 
+			update_player_positions(sock_fd, &Paddle_List, n_clients);	// receives new paddle positions, updates local Paddle_List
             draw_ball(my_win, &ball, true);			
-			draw_all_paddles(my_win, Paddle_List, true);
-			print_players_score(message_win, Paddle_List, n_clients);	
+			draw_all_paddles(my_win, Paddle_List, true);				// draws new ball and paddle positions
+			print_players_score(message_win, Paddle_List, n_clients);	// prints players score on the message window
+
+			/* Redraw the box*/
+			box(my_win, 0 , 0);	
+			wrefresh(my_win);
 		}
 	}
 	close(sock_fd);

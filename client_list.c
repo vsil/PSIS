@@ -1,7 +1,6 @@
 #include "client_list.h"
 
-/* Given a reference (pointer to pointer) to the head
-   of a list and an int, appends a new node at the end  */
+// adds new client to the list (used on server)
 void add_client(struct Node** head_ref, char new_address[], int new_port, paddle_position_t new_paddle)
 {
     /* 1. allocate node */
@@ -14,8 +13,7 @@ void add_client(struct Node** head_ref, char new_address[], int new_port, paddle
     new_node->paddle = new_paddle;
     new_node->player_score = 0;
 
-    /* 3. This new node is going to be the last node, so make next
-          of it as NULL*/// Internet domain sockets libraries
+    /* 3. This new node is going to be the last node, so make next of it as NULL */
     new_node->next = NULL;
 
     /* 4. If the Linked List is empty, then make the new node as head */
@@ -34,27 +32,30 @@ void add_client(struct Node** head_ref, char new_address[], int new_port, paddle
     return;
 }
 
-address add_client_from_waiting_list(struct Node** head_client_list, struct Node** head_waiting_list){
+// adds new player to client_list from the waiting_list; returns new player address
+address add_client_from_waiting_list(struct Node** head_client_list, struct Node** head_waiting_list, ball_position_t* ball, address player_waiting_addr){
 
     struct Node *temp = *head_waiting_list;
     paddle_position_t paddle;
-    address player_waiting_addr;
+    //address player_waiting_addr;
 
+    // new player address is the first client on the waiting_list
     strcpy(player_waiting_addr.addr, temp->address);
     player_waiting_addr.port = temp->port;
 
-    //random initialization of paddle position
+    // random initialization of its paddle position
     new_paddle(&paddle, PADDLE_SIZE);
-    //check if new paddle position collides with any of the other clients                   
-    while(paddle_hit_paddle(paddle, *head_client_list, temp->address, temp->port)){
+    // check if new paddle position collides with any of the other clients or with ball position                   
+    while(paddle_hit_paddle(paddle, ball, *head_client_list, temp->address, temp->port)){
         new_paddle(&paddle, PADDLE_SIZE);
     }    
 
-    add_client(head_client_list, temp->address, temp->port, paddle);
-    delete_client(head_waiting_list, (*head_waiting_list)->address, (*head_waiting_list)->port);
-    return player_waiting_addr;
+    add_client(head_client_list, temp->address, temp->port, paddle);    // adds new client to the client_list
+    delete_client(head_waiting_list, (*head_waiting_list)->address, (*head_waiting_list)->port);  // removes the new client from the waiting list
+    return player_waiting_addr;     // returns new player address
 }
 
+// deletes client from linked list
 void delete_client(struct Node** head_ref, char delete_address[], int delete_port)
 {
     // Store head node
@@ -62,8 +63,8 @@ void delete_client(struct Node** head_ref, char delete_address[], int delete_por
  
     // If head node itself holds the key to be deleted
     if (temp != NULL && strcmp(temp->address, delete_address)==0 && temp->port == delete_port) {
-        *head_ref = temp->next; // Changed head
-        free(temp); // free old 
+        *head_ref = temp->next;  // Changed head
+        free(temp);              // free old 
         return;
     }
  
@@ -91,82 +92,32 @@ void delete_client(struct Node** head_ref, char delete_address[], int delete_por
     free(temp); // Free memory
 }
 
+// prints client_list
 void print_list(struct Node* node)
 {
 	printf("______________Client List Start____________\n");
     while (node != NULL) {
 		printf("Address: %s\n", node->address);
         printf("Port: %d\n", node->port);
-        //printf("Paddle (x,y): (%d,%d)\n\n", node->paddle.x, node->paddle.y);
         node = node->next;
     }
     printf("_______________Client List End_____________\n");
 }
 
 
+/*  // prints paddle_list (used for development only)
 void print_paddle_list(struct Paddle_Node* node)
 {
 	printf("______________Client List Start____________\n");
     while (node != NULL) {
-		printf("Paddle x: %d\n", node->paddle.x);
-        //printf("Paddle (x,y): (%d,%d)\n\n", node->paddle.x, node->paddle.y);
+        printf("Paddle (x,y): (%d,%d)\n\n", node->paddle.x, node->paddle.y);
         node = node->next;
     }
     printf("_______________Client List End_____________\n");
 }
+*/
 
-bool next_player(struct Node** head_ref, char player_address[], int player_port){
-   
-   struct Node *temp = *head_ref;
-   struct Node *next_player;
-   struct Node *first_node = *head_ref;
-
-//    int next_player_port;
-//    char next_player_address[100];
-
-    if (*head_ref == NULL){
-        printf("No players present \n");
-        return false;
-    }
-
-    while (temp->next != NULL) {
-
-        if(strcmp(temp->address, player_address)==0 && temp->port == player_port){
-            break;
-        }
-        temp = temp->next;
-    }
- 
-    // If key was not present in linked list
-    if (temp == NULL){
-		printf("Player not found \n");
-        return false;
-    }
-
-    if (temp->next==NULL){
-        // if the current player is the last on the list (including the case where it is the only client of the list),
-        // send to the first player of the list
-
-        next_player_port = first_node->port;
-        strcpy(next_player_address, first_node->address);
-        return true;
-    }
-
-    else{
-        next_player = temp->next;
-        next_player_port = next_player->port;
-        strcpy(next_player_address, next_player->address);
-        return true;
-    }
-    // st->next_player_address = d;
-    // st->next_player_port = m;
-    //send_play_message(sock_fd, next_player_address, next_player_port);
-}
-
-
-
-/* Given a reference (pointer to pointer) to the head
-   of a list and an int, appends a new node at the end  */
+// adds new_paddle data do local paddle_list (used on client)
 void add_player_list(struct Paddle_Node** head_ref, paddle_position_t new_paddle, int player_score, bool current_player)
 {
     /* 1. allocate node */
@@ -199,7 +150,7 @@ void add_player_list(struct Paddle_Node** head_ref, paddle_position_t new_paddle
 }
 
 
-/* Function to delete the entire linked list */
+/* deletes the entire linked list */
 void reset_list(struct Paddle_Node** head_ref)
 {
  
@@ -219,9 +170,10 @@ void reset_list(struct Paddle_Node** head_ref)
     *head_ref = NULL;
 }
 
-// TO DO: PUT THIS FUNCTION ON VISUALIZATION.C FILE (DEPENDENCIES ERROR i believe)
-// check if new paddle position coincides with any of other players paddle
-bool paddle_hit_paddle(paddle_position_t new_paddle_position, struct Node* client_list, char player_address[], int player_port){
+
+// check if new paddle position coincides with any of other players paddle or with the ball position
+// returns true if overlap is detected, returns false otherwise (valid position in this case)
+bool paddle_hit_paddle(paddle_position_t new_paddle_position, ball_position_t* ball, struct Node* client_list, char player_address[], int player_port){
     
     struct Node* temp;
     temp = client_list;
@@ -231,6 +183,7 @@ bool paddle_hit_paddle(paddle_position_t new_paddle_position, struct Node* clien
     
     int rival_start_x;
     int rival_end_x;
+
     while(temp!=NULL){
         
         // Check if the current node is the one refering to the active player (ignore in this case)
@@ -239,7 +192,7 @@ bool paddle_hit_paddle(paddle_position_t new_paddle_position, struct Node* clien
             continue;
         }
         
-        // Check if y positions of the active player and the other clients are the same
+        // Check if y positions of the active player and the rival player are the same
         if(new_paddle_position.y == temp->paddle.y){
             rival_start_x = temp->paddle.x - temp->paddle.length;
             rival_end_x = temp->paddle.x + temp->paddle.length;
@@ -250,6 +203,14 @@ bool paddle_hit_paddle(paddle_position_t new_paddle_position, struct Node* clien
             }
 
         }
+
+        // check if any x of the new paddle position coincides with ball position
+        if(new_paddle_position.y == ball->y){
+            for (int i = start_x; i <= end_x; i++){
+                if(ball->x == i) 
+                    return true;
+            }
+        }
         temp = temp->next;
     }
 
@@ -257,7 +218,7 @@ bool paddle_hit_paddle(paddle_position_t new_paddle_position, struct Node* clien
 }
     
 
-// Updates the client list with the new paddle position of the player
+// updates the client list with the new paddle position calculated according with the players pressed key
 void update_paddle(struct Node** client_list, char remote_addr_str[], int remote_port, ball_position_t ball, int key)
 {
     struct Node *temp = *client_list;
@@ -265,9 +226,8 @@ void update_paddle(struct Node** client_list, char remote_addr_str[], int remote
     paddle_position_t previous_position;
 
     while (temp != NULL){
-        //printf("target addr and port: %s %d \n", remote_addr_str, remote_port);
-        //printf("current addr and port: %s %d\n", temp->address, temp->port);
 
+        // searches for the active player address on the client_list
         if(temp->port==remote_port && strcmp(temp->address, remote_addr_str)==0){
 
             paddle = temp->paddle;
@@ -277,7 +237,7 @@ void update_paddle(struct Node** client_list, char remote_addr_str[], int remote
                                               
             // check if new position collides with any of the other player's paddles
             // if it does, the paddle doesn't move
-            if(paddle_hit_paddle(paddle, *client_list, remote_addr_str, remote_port)){
+            if(paddle_hit_paddle(paddle, &ball, *client_list, remote_addr_str, remote_port)){
                 temp->paddle = previous_position;
             }
             // otherwise the new paddle position is updated to the list
@@ -288,10 +248,10 @@ void update_paddle(struct Node** client_list, char remote_addr_str[], int remote
         }
         temp = temp->next;
     }
-    exit(0);      // add message error if client not found    
+    exit(0);             // add message error if client not found    
 }
 
-
+// draws all the paddles on paddle_list
 void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, bool del){
     struct Paddle_Node* temp;
     temp = paddle_list;
@@ -301,12 +261,12 @@ void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, bool del){
     }
 }
 
-
-// Update the ball movement when it is hit by the paddle; update player score
+// updates the ball movement when it is hit by the paddle; updates player score
 void paddle_hit_ball(ball_position_t * ball, struct Node ** client_list){
     
     struct Node *temp = *client_list;
     
+    // for each player paddle, checks collision
     while(temp!=NULL){
         int start_x = temp->paddle.x - temp->paddle.length;
         int end_x = temp->paddle.x + temp->paddle.length;
@@ -315,21 +275,28 @@ void paddle_hit_ball(ball_position_t * ball, struct Node ** client_list){
         if (ball->y == temp->paddle.y){
             // Run through the whole length of the paddle
             for (int i = start_x; i <= end_x; i++){
+
                 if (ball->x == i){
-                    temp->player_score++;
-                    printf("Player_score: %d \n", temp->player_score);
+                    temp->player_score++;           // increments player score if ball hits paddle
+                
                     if (ball->up_hor_down == 0){
                         do{
-                            ball->up_hor_down = rand() % 3 -1;
+                            ball->up_hor_down = rand() % 3 -1;  // randomly changes ball direction when it hits horizontally
                         }while(ball->up_hor_down == 0);
                     }
                     else
-                        ball->up_hor_down *= -1;
+                        ball->up_hor_down *= -1;         // inverts ball direction
+                    
                     ball->y=ball->y + ball->up_hor_down;
+
+                    // Check for window limits
+                    if( ball->y == 0 || ball->y == WINDOW_SIZE-1){
+                        ball->up_hor_down *= -1;
+                        ball->left_ver_right = rand() % 3 -1;
+                    }
                 }
             }
         }
         temp = temp->next;
     }
 }
-

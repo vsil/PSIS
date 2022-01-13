@@ -11,8 +11,8 @@ WINDOW * message_win;
 /* ball position structure */
 typedef struct ball_position_t{
     int x, y;
-    int up_hor_down; //  -1 up, 0 horizontal, 1 down
-    int left_ver_right; //  -1 left, 0 vertical,1 right
+    int up_hor_down;                //  -1 up, 0 horizontal, 1 down
+    int left_ver_right;             //  -1 left, 0 vertical,1 right
     char c;
 } ball_position_t;
 
@@ -22,6 +22,7 @@ typedef struct paddle_position_t{
     int length;
 } paddle_position_t;
 
+/* address structure */
 typedef struct address{
     char addr[100];
     int port;
@@ -34,4 +35,4 @@ void draw_paddle(WINDOW *win, paddle_position_t * paddle, bool local_player, boo
 void place_ball_random(ball_position_t * ball);
 void moove_ball(ball_position_t * ball);
 void draw_ball(WINDOW *win, ball_position_t * ball, int draw);
-//void paddle_hit_ball(ball_position_t * ball, struct Node * client_list);
+
