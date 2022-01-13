@@ -113,6 +113,13 @@ void paddle_hit_ball(ball_position_t * ball, paddle_position_t * paddle){
                 else
                     ball->up_hor_down *= -1;
                 ball->y=ball->y + ball->up_hor_down;
+                // Check for window limits
+                if( ball->y == 0 || ball->y == WINDOW_SIZE-1){
+                    ball->up_hor_down *= -1;
+                    ball->left_ver_right = rand() % 3 -1;
+                    mvwprintw(message_win, 3,1,"bottom top win");
+                    wrefresh(message_win);
+                }
             }
         }
     }

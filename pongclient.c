@@ -112,8 +112,8 @@ int main(int argc, char *argv[]) {
 			mvwprintw(message_win, 2,1,"%s",clear);
 			mvwprintw(message_win, 3,1,"%s",clear);
 			/* Update ball position */
+			draw_ball(my_win, &ball, false);
 			ball = m.ball_position;
-            draw_ball(my_win, &ball, false);
             moove_ball(&ball);
             draw_ball(my_win, &ball, true);
 			wrefresh(message_win);
@@ -143,16 +143,16 @@ int main(int argc, char *argv[]) {
 				/* Update paddle */
             	draw_paddle(my_win, &paddle, false);
            		moove_paddle (&paddle, key);
+				paddle_hit_ball(&ball, &paddle);
             	draw_paddle(my_win, &paddle, true);
-				/*Update ball */
+				/* Update ball */
             	draw_ball(my_win, &ball, false);
             	moove_ball(&ball);
-            	draw_ball(my_win, &ball, true);
-				/* Check if paddle has hit the ball */
-				draw_ball(my_win, &ball, false);
 				paddle_hit_ball(&ball, &paddle);
-				draw_ball(my_win, &ball, true);
-				/* Send MOVE message to the server */
+            	draw_ball(my_win, &ball, true);
+				/* Redraw the box*/
+				box(my_win, 0 , 0);	
+				wrefresh(my_win);
 				m.command = MOVE;
 				m.ball_position = ball;
 				nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
