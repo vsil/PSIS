@@ -13,7 +13,7 @@
 #include <time.h>
 
 // Include header files
-#include "client_list.h" 			// visualization already included here
+#include "client_list.h" 		
 #include "sock_dg_inet.h"
 
 
@@ -63,6 +63,7 @@ int main(int argc, char *argv[]) {
 	// Create an internet domain datagram socket
 	int sock_fd;
 	sock_fd= socket(AF_INET, SOCK_DGRAM, 0);
+	// Error handling
 	if (sock_fd == -1){
 		perror("socket: ");
 		exit(-1);
@@ -86,16 +87,16 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
-	// send connection message
-	struct message m;
+	// Send connection message
+	message m;
 	m.command = CONNECT;
-
-	sendto(sock_fd, &m, sizeof(struct message), 0, 
-			(const struct sockaddr *)&server_addr, sizeof(server_addr));
-
-
-
 	int nbytes;
+	nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
+				(const struct sockaddr *)&server_addr, sizeof(server_addr));
+	if (nbytes < 0)
+		printf("Error sending the message to the server \n");
+
+
 	int n_clients;
 	ball_position_t ball;
 	struct Paddle_Node* Paddle_List = NULL; 
@@ -104,7 +105,7 @@ int main(int argc, char *argv[]) {
 	nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
 	n_clients = m.number_clients;
 
-	if (m.command==WAIT_LIST)
+	if (m.command == WAIT_LIST)
 	{
 		printf("\n Max capacity of the server has been reached (%d players)\n", MAX_CLIENTS);
 		if (n_clients==0)
@@ -117,7 +118,7 @@ int main(int argc, char *argv[]) {
 		nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
 	}
 	
-	if(m.command==BOARD_UPDATE){
+	if(m.command == BOARD_UPDATE){
 		ball = m.ball_position;
 
 		// receives paddle_position_message and updates Paddle_List with player information
@@ -158,7 +159,6 @@ int main(int argc, char *argv[]) {
 			key = wgetch(my_win);	
 		}
 
-
 		/* Check the key pressed */
 		if (key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN){
 
@@ -169,11 +169,11 @@ int main(int argc, char *argv[]) {
 			sendto(sock_fd, &m, sizeof(struct message), 0, 
 				(const struct sockaddr *)&server_addr, sizeof(server_addr));
 		}
-
 		else if(key == 'q'){
 			m.command = DISCONNECT;
 			sendto(sock_fd, &m, sizeof(struct message), 0, 
 				(const struct sockaddr *)&server_addr, sizeof(server_addr));
+			// CLoses the socket and terminates the client
 			close(sock_fd);
 			system("clear");
 			exit(0);

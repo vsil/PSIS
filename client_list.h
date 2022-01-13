@@ -53,7 +53,6 @@ char next_player_address[100];
 bool is_next_player;
 
 // Functions
-
 void add_client(struct Node** head_ref, char new_address[], int new_port, paddle_position_t new_paddle);
 void delete_client(struct Node** head_ref, char delete_address[], int delete_port);
 void print_list(struct Node* node);

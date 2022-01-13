@@ -28,7 +28,7 @@ typedef struct address{
 }address;
 
 /* Functions */
-void new_paddle (paddle_position_t * paddle, int legth);
+void new_paddle (paddle_position_t * paddle, int length);
 void moove_paddle (paddle_position_t * paddle, int direction);
 void draw_paddle(WINDOW *win, paddle_position_t * paddle, bool local_player, bool del);
 void place_ball_random(ball_position_t * ball);
