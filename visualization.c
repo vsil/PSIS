@@ -95,7 +95,8 @@ void draw_ball(WINDOW *win, ball_position_t * ball, int draw){
 }
 
 // Updates the ball movement when it is hit by the paddle or vice-versa
-void paddle_hit_ball(ball_position_t * ball, paddle_position_t * paddle){
+void paddle_hit_ball(ball_position_t * ball, paddle_position_t * paddle, 
+    ball_position_t * old_ball, paddle_position_t * old_paddle){
     
     int start_x = paddle->x - paddle->length;
     int end_x = paddle->x + paddle->length;
@@ -103,16 +104,26 @@ void paddle_hit_ball(ball_position_t * ball, paddle_position_t * paddle){
     if (ball->y == paddle->y){
         // Runs through the whole length of the paddle
         for (int i = start_x; i <= end_x; i++){
-            // If the ball x positions coincides with the paddle
+            // If the ball x position coincides with the paddle
             if (ball->x == i){
-                if (ball->up_hor_down == 0){
-                    do{
-                        ball->up_hor_down = rand() % 3 -1;
-                    }while(ball->up_hor_down == 0);
+                // Case 1: the ball and the paddle are moving horizontally
+                if (ball->up_hor_down == 0 && paddle->y == old_paddle->y){
+                    ball->left_ver_right *= -1;
+                    ball->x=ball->x + ball->left_ver_right;
                 }
-                else
+                // Case 2: the ball is moving horizontally and the paddle vertically
+                else if ((ball->up_hor_down == 0 && paddle->y != old_paddle->y)){
+                    if (old_paddle->y < paddle->y)
+                        ball->up_hor_down = 1;
+                    else
+                        ball->up_hor_down = -1;
+                    ball->y = ball->y + ball->up_hor_down;
+                }
+                // Case 3: the other scenarios
+                else{
                     ball->up_hor_down *= -1;
-                ball->y=ball->y + ball->up_hor_down;
+                    ball->y=ball->y + ball->up_hor_down;
+                }
                 // Check for window limits
                 if( ball->y == 0 || ball->y == WINDOW_SIZE-1){
                     ball->up_hor_down *= -1;
@@ -121,6 +132,22 @@ void paddle_hit_ball(ball_position_t * ball, paddle_position_t * paddle){
                     wrefresh(message_win);
                 }
             }
+        }
+    }
+    // Check for the case where the ball and the paddle swap y positions
+    if (paddle->y == old_ball->y && ball->y == old_paddle->y && paddle->y != old_paddle->y && ball->y != old_ball -> y){
+        for (int i = start_x; i <= end_x; i++){
+            if (ball->x == i){
+                ball->up_hor_down *= -1;
+                ball->y=ball->y + 2*ball->up_hor_down; 
+            } 
+        }
+        // Check for window limits
+        if( ball->y == 0 || ball->y == WINDOW_SIZE-1){
+            ball->up_hor_down *= -1;
+            ball->left_ver_right = rand() % 3 -1;
+            mvwprintw(message_win, 3,1,"bottom top win");
+            wrefresh(message_win);
         }
     }
 }

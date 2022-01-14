@@ -16,13 +16,13 @@
 void send_play_message(int sock_fd, char addr[], int port){
 
     int nbytes;
-    struct message m;
+    message m;
     struct sockaddr_in player_addr;
     socklen_t player_addr_size = sizeof(struct sockaddr_in);  
 
     player_addr.sin_family = AF_INET;    // INET domain (ipv4)
     player_addr.sin_port = htons(port);  // translates the port to network byte order
-    // Player adress converted to binary + error handling
+    // Player address converted to binary + error handling
     if( inet_pton(AF_INET, addr, &player_addr.sin_addr) < 1){
         printf("no valid address: \n");
         exit(-1);
@@ -42,7 +42,7 @@ void send_play_message(int sock_fd, char addr[], int port){
 void send_move_message(int sock_fd, struct Node** head_ref, char player_address[], int player_port, ball_position_t ball){
 
     int nbytes;
-    struct message m;
+    message m;
     struct sockaddr_in player_addr;
     socklen_t player_addr_size = sizeof(struct sockaddr_in);  
 
@@ -86,7 +86,7 @@ int main()
 		exit(-1);
 	}
 
-    /* Client adress */
+    /* Server adress */
 	struct sockaddr_in local_addr;
 	local_addr.sin_family = AF_INET;         // INET domain (ipv4)
 	local_addr.sin_port = htons(SOCK_PORT);  // translates the port to network byte order
@@ -109,13 +109,13 @@ int main()
 	char buffer[100];
 	int nbytes;
 	struct Node* client_list = NULL;
-	struct message m;
+	message m;
     bool game_start = true;
+    int n_clients = 0;
 
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_size = sizeof(struct sockaddr_in);
 
-    int n_clients = 0;
 
 	while(1){
          // Waits for a message from any client (receives the number of bytes)

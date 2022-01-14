@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Initialize message
-	struct message m;
+	message m;
 
 	// Send connection message
 	m.command = CONNECT;
@@ -61,6 +61,9 @@ int main(int argc, char *argv[]) {
 	// Initialize paddle position and ball position variables
 	paddle_position_t paddle;
 	ball_position_t ball;
+	// Initialize variables to store previous paddle andd ball positions
+	paddle_position_t old_paddle;
+	ball_position_t old_ball;
 
 	// Curses mode
 	initscr();		    	/* Start curses mode 		*/
@@ -140,19 +143,25 @@ int main(int argc, char *argv[]) {
 
 			/* Check the key pressed */
        		if (key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN){
+				/* Store old positions */
+				old_paddle = paddle;
+				old_ball = ball;
 				/* Update paddle */
             	draw_paddle(my_win, &paddle, false);
            		moove_paddle (&paddle, key);
-				paddle_hit_ball(&ball, &paddle);
             	draw_paddle(my_win, &paddle, true);
 				/* Update ball */
             	draw_ball(my_win, &ball, false);
             	moove_ball(&ball);
-				paddle_hit_ball(&ball, &paddle);
+            	draw_ball(my_win, &ball, true);
+				/* Check if the paddle and the ball collide */
+            	draw_ball(my_win, &ball, false);
+            	paddle_hit_ball(&ball, &paddle, &old_ball, &old_paddle);
             	draw_ball(my_win, &ball, true);
 				/* Redraw the box*/
 				box(my_win, 0 , 0);	
 				wrefresh(my_win);
+
 				m.command = MOVE;
 				m.ball_position = ball;
 				nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
