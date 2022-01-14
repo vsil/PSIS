@@ -1,3 +1,6 @@
+#ifndef VISUALIZATION_H
+#define VISUALIZATION_H
+
 #include <stdlib.h>
 #include <ncurses.h> 
 
@@ -10,8 +13,8 @@ WINDOW * message_win;
 /* Ball position structure */
 typedef struct ball_position_t{
     int x, y;
-    int up_hor_down;    //  -1 up, 0 horizontal, 1 down
-    int left_ver_right; //  -1 left, 0 vertical,1 right
+    int up_hor_down;    // -1 up, 0 horizontal, 1 down
+    int left_ver_right; // -1 left, 0 vertical,1 right
     char c;
 } ball_position_t;
 
@@ -30,3 +33,5 @@ void moove_ball(ball_position_t * ball);
 void draw_ball(WINDOW *win, ball_position_t * ball, int draw);
 void paddle_hit_ball(ball_position_t * ball, paddle_position_t * paddle, 
     ball_position_t * old_ball, paddle_position_t * old_paddle);
+
+#endif

@@ -5,6 +5,7 @@
 
 // General libraries
 #include <ctype.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -12,7 +13,11 @@
 #include <stdbool.h>
 #include <time.h>
 
+// ncurses library
+#include <ncurses.h>
+
 // Include header files
+#include "visualization.h"
 #include "pong.h" 			
 #include "sock_dg_inet.h"
 

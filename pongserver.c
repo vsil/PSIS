@@ -3,14 +3,18 @@
 #include<arpa/inet.h>
 #include<sys/socket.h>
 
-// ncurses library
-#include <ncurses.h>
+// General libraries
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdbool.h>
 
 // Include header files
 #include "client_list.h"
-#include "pong.h"
+#include "pong.h" 			
 #include "sock_dg_inet.h"
-
 
 // Create a function to send a PLAY command to a client
 void send_play_message(int sock_fd, char addr[], int port){

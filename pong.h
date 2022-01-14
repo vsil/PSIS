@@ -1,3 +1,6 @@
+#ifndef PONG_H
+#define PONG_H
+
 #include "visualization.h"
 
 /* List of commands */
@@ -9,5 +12,7 @@ typedef struct message
     command_t command;               // commands
     ball_position_t ball_position;   // ball position (to be sent when command = MOVE)
 }message;
+
+#endif
 
 
