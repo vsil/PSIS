@@ -23,11 +23,14 @@ void update_player_positions(int sock_fd, struct Paddle_Node** paddle_list, int 
 	paddle_position_t paddle;
 	int player_score;
 	bool current_player;
+	int nbytes;
 
 	reset_list(paddle_list);			// frees memory from the list used in the previous round
 
 	for(int i=0; i<n_clients; i++){		// receives one paddle_position_message per client
-		recv(sock_fd, &m_paddle, sizeof(struct paddle_position_message), 0);
+		nbytes = recv(sock_fd, &m_paddle, sizeof(struct paddle_position_message), 0);
+		if (nbytes <= 0)
+            printf("Error receiving the message from the server \n");
 		paddle = m_paddle.paddle_position;
 		player_score = m_paddle.player_score;
 		current_player = m_paddle.current_player;
@@ -87,17 +90,21 @@ int main(int argc, char *argv[]) {
 	// send connection message
 	struct message m;
 	m.command = CONNECT;
-
-	sendto(sock_fd, &m, sizeof(struct message), 0, 
-			(const struct sockaddr *)&server_addr, sizeof(server_addr));
-
 	int nbytes;
+
+	nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
+				(const struct sockaddr *)&server_addr, sizeof(server_addr));
+	if (nbytes < 0)
+            printf("Error sending the message to the server \n"); 
+
 	int n_clients;
 	ball_position_t ball;
 	struct Paddle_Node* Paddle_List = NULL; 
 
 	// receives general message
 	nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
+	if (nbytes <= 0)
+            printf("Error receiving the message from the server \n");
 	n_clients = m.number_clients;
 
 	// the server has reached full capacity, shows client waiting message
@@ -112,6 +119,8 @@ int main(int argc, char *argv[]) {
 			printf("There are currently %d players waiting in front of you\n", n_clients);
 		}
 		nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
+		if (nbytes <= 0)
+            printf("Error receiving the message from the server \n");
 	}
 	
 	// receives board_update message
@@ -158,15 +167,19 @@ int main(int argc, char *argv[]) {
 			/* Send Paddle_move message to the server */
 			m.command = PADDLE_MOVE;
 			m.pressed_key = key;
-			sendto(sock_fd, &m, sizeof(struct message), 0, 
+			nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
 				(const struct sockaddr *)&server_addr, sizeof(server_addr));
+			if (nbytes < 0)
+            	printf("Error sending the message to the server \n"); 
 		}
 
 		else if(key == 'q'){
 			/* Send disconnect message to the server, closes socket and exits application */
 			m.command = DISCONNECT;
-			sendto(sock_fd, &m, sizeof(struct message), 0, 
+			nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
 				(const struct sockaddr *)&server_addr, sizeof(server_addr));
+			if (nbytes < 0)
+            	printf("Error sending the message to the server \n"); 
 			close(sock_fd);
 			system("clear");
 			exit(0);
@@ -174,8 +187,10 @@ int main(int argc, char *argv[]) {
 
 		key = 0; // resets user key
 				
-		// Wait for a message
-		recv(sock_fd, &m, sizeof(struct message), 0);
+		// Waits for a message
+		nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
+		if (nbytes <= 0)
+            printf("Error receiving the message from the server \n");
 
 		// If a Board_update message is received
 		if(m.command == BOARD_UPDATE){

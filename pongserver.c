@@ -32,6 +32,9 @@ void send_wait_list_message(int sock_fd, char addr[], int port, int n_clients){
     m.number_clients = n_clients;
     nbytes = sendto(sock_fd, &m, sizeof(struct message), 0,
                 (const struct sockaddr *) &player_addr, player_addr_size);
+    // Error handling (returns -1 if there is an error)
+    if (nbytes < 0)
+        printf("Error sending the message to the client \n");  
 }
 
 // sends board_update message, with the information of all players paddle positions and scores
@@ -57,6 +60,9 @@ void send_board_update(int sock_fd, char addr[], int port, ball_position_t ball,
 
     nbytes = sendto(sock_fd, &m, sizeof(struct message), 0,
                 (const struct sockaddr *) &player_addr, player_addr_size);
+    // Error handling (returns -1 if there is an error)
+    if (nbytes < 0)
+        printf("Error sending the message to the client \n");  
 
     // goes through client_list and sends to the client the paddle positions and scores of each player
     // client builds a paddle list with this data
@@ -72,6 +78,9 @@ void send_board_update(int sock_fd, char addr[], int port, ball_position_t ball,
 
         nbytes = sendto(sock_fd, &paddle_m, sizeof(struct paddle_position_message), 0,
                 (const struct sockaddr *) &player_addr, player_addr_size);
+        // Error handling (returns -1 if there is an error)
+        if (nbytes < 0)
+            printf("Error sending the message to the client \n"); 
 
         client_list = client_list->next;
     }
@@ -124,6 +133,8 @@ int main()
 
 		nbytes = recvfrom(sock_fd, &m, sizeof(struct message), 0,
 		                  ( struct sockaddr *)&client_addr, &client_addr_size);
+        if (nbytes <= 0)
+            printf("Error receiving the message from the client\n");
 
 		char remote_addr_str[100];
 		int remote_port = ntohs(client_addr.sin_port);
