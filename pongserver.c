@@ -118,7 +118,8 @@ int main()
     // Initialize paddle position and ball position variables
 	paddle_position_t paddle;
 	ball_position_t ball;
-
+    ball_position_t previous_ball;
+    
 	while(1){
 
 		nbytes = recvfrom(sock_fd, &m, sizeof(struct message), 0,
@@ -177,10 +178,11 @@ int main()
                 
                 n_ball_turn++;
                 if(n_ball_turn==n_clients){
+                    previous_ball = ball;
                     moove_ball(&ball);                      // calculates new ball position every "n_clients" PADDLE_MOVE messages
-                    paddle_hit_ball(&ball, &client_list);   // update the ball movement when it hits the paddle; update player score
+                    paddle_hit_ball(&ball, &client_list, &previous_ball);   // update the ball movement when it hits the paddle; update player score
                     n_ball_turn=0;
-                }                                              // ADICIONAR DINAMICA COM DOUBLE PADDLE_HIT_BALL, À SEMELHANCA DO RELAY PONG?
+                }                                             
 
                 send_board_update(sock_fd, remote_addr_str, remote_port, ball, client_list, n_clients);  // sends board_update message to client with new data
 

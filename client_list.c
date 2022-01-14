@@ -239,10 +239,12 @@ void update_paddle(struct Node** client_list, char remote_addr_str[], int remote
             // if it does, the paddle doesn't move
             if(paddle_hit_paddle(paddle, &ball, *client_list, remote_addr_str, remote_port)){
                 temp->paddle = previous_position;
+                temp->previous_paddle = previous_position;
             }
             // otherwise the new paddle position is updated to the list
             else{
                 temp->paddle = paddle;
+                temp->previous_paddle = previous_position;
             }
             return;
         }
@@ -262,39 +264,69 @@ void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, bool del){
 }
 
 // updates the ball movement when it is hit by the paddle; updates player score
-void paddle_hit_ball(ball_position_t * ball, struct Node ** client_list){
+void paddle_hit_ball(ball_position_t * ball, struct Node ** client_list, ball_position_t * previous_ball){
     
     struct Node *temp = *client_list;
+    paddle_position_t paddle;
+    paddle_position_t old_paddle;
     
     // for each player paddle, checks collision
     while(temp!=NULL){
-        int start_x = temp->paddle.x - temp->paddle.length;
-        int end_x = temp->paddle.x + temp->paddle.length;
+        paddle = temp->paddle;
+        old_paddle = temp->previous_paddle;
 
-        // Check if y positions are the same
-        if (ball->y == temp->paddle.y){
-            // Run through the whole length of the paddle
+        int start_x = paddle.x - paddle.length;
+        int end_x = paddle.x + paddle.length;
+
+        // Checks if y positions are the same (same row)
+        if (ball->y == paddle.y){
+            // Runs through the whole length of the paddle
             for (int i = start_x; i <= end_x; i++){
-
+                // If the ball x position coincides with the paddle
                 if (ball->x == i){
-                    temp->player_score++;           // increments player score if ball hits paddle
-                
-                    if (ball->up_hor_down == 0){
-                        do{
-                            ball->up_hor_down = rand() % 3 -1;  // randomly changes ball direction when it hits horizontally
-                        }while(ball->up_hor_down == 0);
-                    }
-                    else
-                        ball->up_hor_down *= -1;         // inverts ball direction
-                    
-                    ball->y=ball->y + ball->up_hor_down;
 
+                    temp->player_score++; // increments player score
+
+                    // Case 1: the ball and the paddle are moving horizontally
+                    if (ball->up_hor_down == 0 && paddle.y == old_paddle.y){
+                        ball->left_ver_right *= -1;
+                        ball->x=ball->x + ball->left_ver_right;
+                    }
+                    // Case 2: the ball is moving horizontally and the paddle vertically
+                    else if ((ball->up_hor_down == 0 && paddle.y != old_paddle.y)){
+                        if (old_paddle.y < paddle.y)
+                            ball->up_hor_down = 1;
+                        else
+                            ball->up_hor_down = -1;
+                        ball->y = ball->y + ball->up_hor_down;
+                    }
+                    // Case 3: the other scenarios
+                    else{
+                        ball->up_hor_down *= -1;
+                        ball->y=ball->y + ball->up_hor_down;
+                    }
                     // Check for window limits
                     if( ball->y == 0 || ball->y == WINDOW_SIZE-1){
                         ball->up_hor_down *= -1;
                         ball->left_ver_right = rand() % 3 -1;
                     }
                 }
+            }
+        }
+
+        // Check for the case where the ball and the paddle swap y positions
+        if (paddle.y == previous_ball->y && ball->y == old_paddle.y && paddle.y != old_paddle.y && ball->y != previous_ball -> y){
+            for (int i = start_x; i <= end_x; i++){
+                if (ball->x == i){
+                    temp->player_score++; // increments player score
+                    ball->up_hor_down *= -1;
+                    ball->y=ball->y + 2*ball->up_hor_down; 
+                } 
+            }
+            // Check for window limits
+            if( ball->y == 0 || ball->y == WINDOW_SIZE-1){
+                ball->up_hor_down *= -1;
+                ball->left_ver_right = rand() % 3 -1;
             }
         }
         temp = temp->next;

@@ -35,6 +35,7 @@ struct Node {
     char address[100];
     int port;
     paddle_position_t paddle;
+    paddle_position_t previous_paddle;
     int player_score;
     struct Node* next;
 };
@@ -65,5 +66,4 @@ void print_paddle_list(struct Paddle_Node* node);
 void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, bool del);
 address add_client_from_waiting_list(struct Node** head_client_list, struct Node** head_waiting_list, ball_position_t* ball, address player_waiting_addr);
 bool paddle_hit_paddle(paddle_position_t new_paddle_position, ball_position_t* ball,struct Node* client_list, char player_address[], int player_port);
-void paddle_hit_ball(ball_position_t * ball, struct Node ** client_list);
-
+void paddle_hit_ball(ball_position_t * ball, struct Node ** client_list, ball_position_t * previous_ball);
