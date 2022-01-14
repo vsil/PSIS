@@ -13,7 +13,9 @@
 #include <time.h>
 
 // Include header files
-#include "client_list.h" 			// visualization.h already included here
+#include "client_list.h" 
+#include "visualization.h"
+#include "pong.h"			
 #include "sock_dg_inet.h"
 
 // receives all the player paddles and scores from the server, adds them to local client paddle_list

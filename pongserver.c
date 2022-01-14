@@ -3,12 +3,20 @@
 #include<arpa/inet.h>
 #include<sys/socket.h>
 
-// ncurses library
-#include <ncurses.h>
+// General libraries
+#include <ctype.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdbool.h>
+#include <time.h>
+
 
 // Include header files
-#include "client_list.h"        // "visualization.h" included here
-#include "pong.h"
+#include "client_list.h" 
+#include "visualization.h"
+#include "pong.h"			
 #include "sock_dg_inet.h"
 
 
