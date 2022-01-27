@@ -42,7 +42,6 @@ void send_play_message(int sock_fd, char addr[], int port){
         exit(-1);
     }
 
-    // Message to be sent
     m.command = SEND;
     // Send the message
     nbytes = sendto(sock_fd, &m, sizeof(struct message), 0,
