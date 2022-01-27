@@ -16,6 +16,16 @@
 #include "pong.h" 			
 #include "sock_dg_inet.h"
 
+// Global variables
+int n_clients;
+int sock_fd;
+struct Node* client_list;
+
+struct player_address{
+    char player_addr_str[100];
+    int player_port;
+};
+
 // Create a function to send a PLAY command to a client
 void send_play_message(int sock_fd, char addr[], int port){
 
@@ -79,11 +89,32 @@ void send_move_message(int sock_fd, struct Node** head_ref, char player_address[
     }
 }
 
+void* player_timer_thread(void* arg){
+	/* Send the ball to the next player;
+        if there is only one player, send the ball to that player */
+    
+    struct player_address *current_player = arg;
+    while(1){
+        sleep(10);
+        if (n_clients == 0)
+            pthread_exit(NULL);
+        else if (n_clients == 1)
+            send_play_message(sock_fd, current_player->player_addr_str, current_player->player_port);
+        else{
+            if (next_player(&client_list, current_player->player_addr_str, current_player->player_port)){
+                send_play_message(sock_fd, next_player_address, next_player_port);
+                current_player->player_port = next_player_port;
+                strcpy(current_player->player_addr_str, next_player_address); 
+	        }
+        }
+    }
+}
+
 int main()
 {
-    // Create an internet domain datagram socket (ipv4)
-	int sock_fd;
-	sock_fd= socket(AF_INET, SOCK_DGRAM, 0);
+    // // Create an internet domain datagram socket (ipv4)
+	// int sock_fd;
+	sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
     // Error handling
 	if (sock_fd == -1){
 		perror("socket: ");
@@ -110,12 +141,12 @@ int main()
 	printf("Ready to receive messages \n");
 
     // Variables initialization
+    client_list = NULL;
 	char buffer[100];
 	int nbytes;
-	struct Node* client_list = NULL;
 	message m;
     bool game_start = true;
-    int n_clients = 0;
+    n_clients = 0;
 
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_size = sizeof(struct sockaddr_in);
@@ -145,19 +176,14 @@ int main()
                 if(n_clients == 1){
                     // The first player joining the server receives the ball
                     // Send play_message to the player
-                    send_play_message(sock_fd, remote_addr_str, remote_port);
-                    game_start = false; // Set game start
+
+                    struct player_address current_player;
+                    strcpy(current_player.player_addr_str, remote_addr_str);
+                    current_player.player_port = remote_port;
+                    
+                    pthread_t player_timer_thread_id;
+                    pthread_create(&player_timer_thread_id, NULL, player_timer_thread, &current_player);
                 }
-                break;
-            case RELEASE:
-                printf("release ball message detected!\n");
-                    /* Send the ball to the next player;
-                    if there is only one player, send the ball to that player */
-                    if (n_clients == 1)
-                        send_play_message(sock_fd, remote_addr_str, remote_port);
-                    else
-						if (next_player(&client_list, remote_addr_str, remote_port))
-							send_play_message(sock_fd, next_player_address, next_player_port);
                 break;
             case MOVE:
                 printf("move ball message detected!\n");
