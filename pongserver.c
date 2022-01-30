@@ -51,6 +51,33 @@ void send_play_message(int sock_fd, char addr[], int port){
         printf("Error sending the message to the client \n");                
 }
 
+
+void send_release_message(int sock_fd, char addr[], int port){
+
+    int nbytes;
+    message m;
+    struct sockaddr_in player_addr;
+    socklen_t player_addr_size = sizeof(struct sockaddr_in);  
+
+    player_addr.sin_family = AF_INET;    // INET domain (ipv4)
+    player_addr.sin_port = htons(port);  // translates the port to network byte order
+    // Player address converted to binary + error handling
+    if( inet_pton(AF_INET, addr, &player_addr.sin_addr) < 1){
+        printf("no valid address: \n");
+        exit(-1);
+    }
+
+    m.command = RELEASE;
+    // Send the message
+    nbytes = sendto(sock_fd, &m, sizeof(struct message), 0,
+                (const struct sockaddr *) &player_addr, player_addr_size);
+    // Error handling (returns -1 if there is an error)
+    if (nbytes < 0)
+        printf("Error sending the message to the client \n");
+
+
+}
+
 // Create a function to send a MOVE command to a client as well as the updated ball position
 void send_move_message(int sock_fd, struct Node** head_ref, char player_address[], int player_port, ball_position_t ball){
 
@@ -101,6 +128,7 @@ void* player_timer_thread(void* arg){
             send_play_message(sock_fd, current_player->player_addr_str, current_player->player_port);
         else{
             if (next_player(&client_list, current_player->player_addr_str, current_player->player_port)){
+                send_release_message(sock_fd, current_player->player_addr_str, current_player->player_port);
                 send_play_message(sock_fd, next_player_address, next_player_port);
                 current_player->player_port = next_player_port;
                 strcpy(current_player->player_addr_str, next_player_address); 
@@ -175,6 +203,7 @@ int main()
                 if(n_clients == 1){
                     // The first player joining the server receives the ball
                     // Send play_message to the player
+                    send_play_message(sock_fd, remote_addr_str, remote_port);
 
                     struct player_address current_player;
                     strcpy(current_player.player_addr_str, remote_addr_str);

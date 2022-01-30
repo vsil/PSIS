@@ -36,6 +36,8 @@ message m;
 bool play_state;
 pthread_mutex_t lock;
 
+int h=0;
+
 void* ball_thread(void* arg){
 	int nbytes;
 	while(1){
@@ -179,9 +181,9 @@ int main(int argc, char *argv[]) {
 
 	play_state = false; 		// Initialize play_state boolean
 
-	/* Clock variables */
-	time_t begin; 
-	double time_spent;
+	// /* Clock variables */
+	// time_t begin; 
+	// double time_spent;
 
 	/* Clear string */
 	char clear[] = "                                          ";
@@ -195,13 +197,17 @@ int main(int argc, char *argv[]) {
 
 	command_t recv_commd;
 
+	pthread_t thread_ball_id;
+
 	while(1){
 
 		// Wait for a message from the server
 		nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
 		pthread_mutex_lock(&lock);
 		// Error handling
-		if (nbytes <= 0)
+		if (nbytes == 0)
+            printf("000000000000000000000000000SSIJDENWJENWIJDVH \n");
+		if (nbytes < 0)
             printf("Error receiving the message from the server \n");
 		recv_commd = m.command;	
 		pthread_mutex_unlock(&lock);
@@ -223,11 +229,27 @@ int main(int argc, char *argv[]) {
 		// If a Send_ball message is received
 		if(recv_commd == SEND){
 			play_state = true; 		// Entering play_state
-			pthread_t thread_ball_id;
-			pthread_create(&thread_ball_id, NULL, ball_thread, NULL);
+			
+			if (h == 0){			
+				pthread_create(&thread_ball_id, NULL, ball_thread, NULL);  // creates ball thread only on the first SEND message received
+			}
+			h++;
 			mvwprintw(message_win, 1,1,"%s",clear);
 			mvwprintw(message_win, 1,1,"PLAY STATE");
 			mvwprintw(message_win, 2,1,"You can control the paddle: ");
+			mvwprintw(message_win, 4,1, "%d", h);
+			wrefresh(message_win);
+		}
+
+		// If a Release message is received
+		if(recv_commd == RELEASE){
+			play_state = false; 		// entering waiting_state
+			h=0;
+			pthread_cancel(thread_ball_id);
+			mvwprintw(message_win, 1,1,"%s",clear);
+			mvwprintw(message_win, 1,1,"WAITING STATE");
+			mvwprintw(message_win, 2,1,clear);
+			mvwprintw(message_win, 4,1, "%d", h);
 			wrefresh(message_win);
 		}
 	}
