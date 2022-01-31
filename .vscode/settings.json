@@ -1,8 +1,6 @@
 {
     "files.associations": {
         "string.h": "c",
-        "cerrno": "c",
-        "inet.h": "c",
-        "client_list.h": "c"
+        "in.h": "c"
     }
 }

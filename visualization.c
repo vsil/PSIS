@@ -1,14 +1,22 @@
 #include "visualization.h"
 
-// Creates a new paddle
-void new_paddle (paddle_position_t * paddle, int legth){
-    paddle->x = WINDOW_SIZE/2;
-    paddle->y = WINDOW_SIZE-2;
-    paddle->length = legth;
+// Creates a new paddle 
+void new_paddle (paddle_position_t * paddle, int length){
+    int start_x; int end_x;                  
+    do{
+        paddle->x = rand() % WINDOW_SIZE;
+        start_x = paddle->x - paddle->length;
+        end_x = paddle->x + paddle->length; 
+    }while(start_x <= 0 || end_x >= WINDOW_SIZE - 1);
+    do{
+        paddle->y = rand() % WINDOW_SIZE;
+    }while(paddle->y == 0 || paddle->y == WINDOW_SIZE - 1);
+    paddle->length = length;
 }
 
 // Moves the paddle (update its position)
 void moove_paddle (paddle_position_t * paddle, int direction){
+
     if (direction == KEY_UP){
         if (paddle->y  != 1){
             paddle->y --;
@@ -31,12 +39,19 @@ void moove_paddle (paddle_position_t * paddle, int direction){
 }
 
 // Draws the paddle on the screen
-void draw_paddle(WINDOW *win, paddle_position_t * paddle, int del){
+void draw_paddle(WINDOW *win, paddle_position_t * paddle, bool local_player, bool del){
     int ch;
     if(del){
-        ch = '_';
+        if (local_player)
+        {
+            ch = '=';
+        }
+        else{
+            ch = '_';
+        }
+
     }else{
-        ch = ' ';
+        ch = ' '; 
     }
     int start_x = paddle->x - paddle->length;
     int end_x = paddle->x + paddle->length;
@@ -52,29 +67,29 @@ void place_ball_random(ball_position_t * ball){
     ball->x = rand() % WINDOW_SIZE ;
     ball->y = rand() % WINDOW_SIZE ;
     ball->c = 'o';
-    ball->up_hor_down = rand() % 3 -1; //  -1 up, 1 - down
-    ball->left_ver_right = rand() % 3 -1 ; // 0 vertical, -1 left, 1 right
+    ball->up_hor_down = rand() % 3 -1;              //  -1 up, 1 - down
+    ball->left_ver_right = rand() % 3 -1 ;          // 0 vertical, -1 left, 1 right
 }
 
 // Moves the ball (update its position)
 void moove_ball(ball_position_t * ball){
     
     int next_x = ball->x + ball->left_ver_right;
+
     if( next_x == 0 || next_x == WINDOW_SIZE-1){
         ball->up_hor_down = rand() % 3 -1 ;
         ball->left_ver_right *= -1;
-        mvwprintw(message_win, 3,1,"left right win");
+        mvwprintw(message_win, 3,1,"left right win");               //THIS IS NOT USED, SHOULD BE DELETED RIGHT?
         wrefresh(message_win);
-     }else{
+    }else{
         ball->x = next_x;
     }
 
-    
     int next_y = ball->y + ball->up_hor_down;
     if( next_y == 0 || next_y == WINDOW_SIZE-1){
         ball->up_hor_down *= -1;
         ball->left_ver_right = rand() % 3 -1;
-        mvwprintw(message_win, 3,1,"bottom top win");
+        mvwprintw(message_win, 3,1,"bottom top win");               //THIS IS NOT USED, SHOULD BE DELETED RIGHT?
         wrefresh(message_win);
     }else{
         ball -> y = next_y;
@@ -92,62 +107,4 @@ void draw_ball(WINDOW *win, ball_position_t * ball, int draw){
     wmove(win, ball->y, ball->x);
     waddch(win,ch);
     wrefresh(win);
-}
-
-// Updates the ball movement when it is hit by the paddle or vice-versa
-void paddle_hit_ball(ball_position_t * ball, paddle_position_t * paddle, 
-    ball_position_t * old_ball, paddle_position_t * old_paddle){
-    
-    int start_x = paddle->x - paddle->length;
-    int end_x = paddle->x + paddle->length;
-    // Checks if y positions are the same (same row)
-    if (ball->y == paddle->y){
-        // Runs through the whole length of the paddle
-        for (int i = start_x; i <= end_x; i++){
-            // If the ball x position coincides with the paddle
-            if (ball->x == i){
-                // Case 1: the ball and the paddle are moving horizontally
-                if (ball->up_hor_down == 0 && paddle->y == old_paddle->y){
-                    ball->left_ver_right *= -1;
-                    ball->x=ball->x + ball->left_ver_right;
-                }
-                // Case 2: the ball is moving horizontally and the paddle vertically
-                else if ((ball->up_hor_down == 0 && paddle->y != old_paddle->y)){
-                    if (old_paddle->y < paddle->y)
-                        ball->up_hor_down = 1;
-                    else
-                        ball->up_hor_down = -1;
-                    ball->y = ball->y + ball->up_hor_down;
-                }
-                // Case 3: the other scenarios
-                else{
-                    ball->up_hor_down *= -1;
-                    ball->y=ball->y + ball->up_hor_down;
-                }
-                // Check for window limits
-                if( ball->y == 0 || ball->y == WINDOW_SIZE-1){
-                    ball->up_hor_down *= -1;
-                    ball->left_ver_right = rand() % 3 -1;
-                    mvwprintw(message_win, 3,1,"bottom top win");
-                    wrefresh(message_win);
-                }
-            }
-        }
-    }
-    // Check for the case where the ball and the paddle swap y positions
-    if (paddle->y == old_ball->y && ball->y == old_paddle->y && paddle->y != old_paddle->y && ball->y != old_ball -> y){
-        for (int i = start_x; i <= end_x; i++){
-            if (ball->x == i){
-                ball->up_hor_down *= -1;
-                ball->y=ball->y + 2*ball->up_hor_down; 
-            } 
-        }
-        // Check for window limits
-        if( ball->y == 0 || ball->y == WINDOW_SIZE-1){
-            ball->up_hor_down *= -1;
-            ball->left_ver_right = rand() % 3 -1;
-            mvwprintw(message_win, 3,1,"bottom top win");
-            wrefresh(message_win);
-        }
-    }
 }
