@@ -1,8 +1,9 @@
 #include "visualization.h"
 
 // Creates a new paddle 
-void new_paddle (paddle_position_t * paddle, int length){
-    int start_x; int end_x;                  
+void new_paddle (paddle_position_t * paddle){
+    int start_x; int end_x;          
+    paddle->length = PADDLE_SIZE;       
     do{
         paddle->x = rand() % WINDOW_SIZE;
         start_x = paddle->x - paddle->length;
@@ -11,7 +12,6 @@ void new_paddle (paddle_position_t * paddle, int length){
     do{
         paddle->y = rand() % WINDOW_SIZE;
     }while(paddle->y == 0 || paddle->y == WINDOW_SIZE - 1);
-    paddle->length = length;
 }
 
 // Moves the paddle (update its position)

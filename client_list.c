@@ -115,8 +115,8 @@ void add_player_list(struct Paddle_Node** head_ref, paddle_position_t new_paddle
     return;
 }
 
-// updates the client list with the new paddle position calculated according with the players pressed key
-void update_paddle(struct Node** client_list, int client_socket, ball_position_t ball, int key)
+// paddle_hit_balls the client list with the new paddle position calculated according with the players pressed key
+void update_paddle(struct Node** client_list, int client_socket, int key)
 {
     struct Node *temp = *client_list;
     paddle_position_t paddle;
@@ -134,7 +134,7 @@ void update_paddle(struct Node** client_list, int client_socket, ball_position_t
                                               
             // check if new position collides with any of the other player's paddles
             // if it does, the paddle doesn't move
-            if(paddle_hit_paddle(paddle, &ball, *client_list, client_socket)){
+            if(paddle_hit_paddle(paddle, *client_list, client_socket)){
                 temp->paddle = previous_position;
                 temp->previous_paddle = previous_position;
             }
@@ -184,7 +184,7 @@ void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, bool del){
 
 // check if new paddle position coincides with any of other players paddle or with the ball position
 // returns true if overlap is detected, returns false otherwise (valid position in this case)
-bool paddle_hit_paddle(paddle_position_t new_paddle_position, ball_position_t* ball, struct Node* client_list, int client_socket){
+bool paddle_hit_paddle(paddle_position_t new_paddle_position, struct Node* client_list, int client_socket){
     
     struct Node* temp;
     temp = client_list;
@@ -222,7 +222,7 @@ bool paddle_hit_paddle(paddle_position_t new_paddle_position, ball_position_t* b
 }
 
 // updates the ball movement when it is hit by the paddle; updates player score
-void paddle_hit_ball(ball_position_t * ball, struct Node ** client_list, ball_position_t * previous_ball){
+paddle_hit_ball(ball_position_t * ball, struct Node ** client_list, ball_position_t * previous_ball){
     
     struct Node *temp = *client_list;
     paddle_position_t paddle;

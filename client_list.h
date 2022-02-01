@@ -43,10 +43,10 @@ void add_client(struct Node** head_ref, char new_address[], int new_port, paddle
 void delete_client(struct Node** head_ref, int client_socket);
 void print_list(struct Node* node);
 void add_player_list(struct Paddle_Node** head_ref, paddle_position_t new_paddle, int player_score, bool current_player);
-void update_paddle(struct Node** client_list, int client_socket, ball_position_t ball, int key);
+void update_paddle(struct Node** client_list, int client_socket, int key);
 void reset_list(struct Paddle_Node** head_ref);
 void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, bool del);
-bool paddle_hit_paddle(paddle_position_t new_paddle_position, ball_position_t* ball,struct Node* client_list, int client_socket);
-void paddle_hit_ball(ball_position_t * ball, struct Node ** client_list, ball_position_t * previous_ball);
+bool paddle_hit_paddle(paddle_position_t new_paddle_position,struct Node* client_list, int client_socket);
+paddle_hit_ball(ball_position_t * ball, struct Node ** client_list, ball_position_t * previous_ball);
 
 #endif

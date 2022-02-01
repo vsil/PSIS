@@ -53,10 +53,6 @@ void* keyboard_thread(void* arg){
 
 		else if(key == 'q'){
 			/* Send disconnect message to the server, closes socket and exits application */
-			m.command = DISCONNECT;
-			nbytes = send(sock_fd, &m, sizeof(struct message), 0);
-			if (nbytes < 0)
-            	printf("Error sending the message to the server \n"); 
 			close(sock_fd);
 			system("clear");
 			exit(0);

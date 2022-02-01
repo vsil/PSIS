@@ -13,7 +13,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
-#include <time.h>
 
 
 // Include header files
@@ -24,15 +23,28 @@
 
 // Global variables
 ball_position_t ball;
-int n_clients = 0;
-struct Node* client_list = NULL;
-int sock_fd;
-struct message m;
-struct sockaddr_in client_addr; 
-
-// Initialize paddle position and ball position variables
-paddle_position_t paddle;
 ball_position_t previous_ball;
+
+int n_clients;
+struct Node* client_list;
+
+int sock_fd;
+struct message m; 
+
+long int current_client_socket;
+
+
+void* ball_thread(void* arg){
+	int nbytes;
+	while(1){
+		sleep(1);
+        previous_ball = ball;
+        moove_ball(&ball);                      // calculates new ball position every "n_clients" PADDLE_MOVE messages
+        paddle_hit_ball(&ball, &client_list, &previous_ball);   // update the ball movement when it hits the paddle; update player score                                        
+        send_board_update(sock_fd, current_client_socket, ball, client_list);  // sends board_update message to client with new data
+	}
+}
+
 
 
 void* listen_to_client_thread(void* arg){
@@ -49,6 +61,15 @@ void* listen_to_client_thread(void* arg){
         }
         printf("received %d bytes \n", nbytes);
 
+        current_client_socket = client_socket;
+
+        // if (nbytes == 0){
+        //     // removes player from the game; invites player from the waiting list
+        //     printf("disconnection message detected!\n");
+        //     n_clients--;
+        //     delete_client(&client_list, client_socket);  // deletes client entry on client_list    
+        // }
+
         nbytes = 0;
         int pressed_key;  
 
@@ -62,11 +83,12 @@ void* listen_to_client_thread(void* arg){
                 printf("paddle move message detected");
 
                 pressed_key = m.pressed_key;
-                update_paddle(&client_list, client_socket, ball, pressed_key);
-                previous_ball = ball;
-                moove_ball(&ball);                      // calculates new ball position every "n_clients" PADDLE_MOVE messages
-                paddle_hit_ball(&ball, &client_list, &previous_ball);   // update the ball movement when it hits the paddle; update player score                                        
-                send_board_update(sock_fd, client_socket, ball, client_list);  // sends board_update message to client with new data
+                update_paddle(&client_list, client_socket, pressed_key);
+               
+                //moove_ball(&ball);                      // calculates new ball position every "n_clients" PADDLE_MOVE messages
+                paddle_hit_ball(&ball, &client_list, &previous_ball);  // update the ball movement when it hits the paddle; update player score                                        
+                send_board_update(sock_fd, client_socket, ball, client_list);
+                                
                 break;
 
             case DISCONNECT:
@@ -79,54 +101,6 @@ void* listen_to_client_thread(void* arg){
         }
     }
 }
-
-
-void* new_connection_thread(void* arg){
-    
-    socklen_t client_addr_size = sizeof(struct sockaddr_in);
-    int backlog = 10; // ??
-    int client_socket;
-
-    while(1){
-        listen(sock_fd, backlog);  // doesnt block
-        
-        client_socket = accept(sock_fd,(struct sockaddr *)&client_addr, &client_addr_size); // blocks -> use thread! creates new socket; used to read/write to client; original socket available for new connections
-        
-        char remote_addr_str[100];
-        int remote_port = ntohs(client_addr.sin_port);
-        if (inet_ntop(AF_INET, &client_addr.sin_addr, remote_addr_str, 100) == NULL){
-            perror("converting remote addr: ");
-        }
-        printf("estabilished connection: %s %d:\n", remote_addr_str, remote_port);
-        
-
-
-        if(n_clients == 0){
-            place_ball_random(&ball);   //random initialization of ball position
-            // start ball thread?
-        }
-        n_clients++;
-
-        paddle_position_t paddle;
-        // random initialization of paddle position
-        new_paddle(&paddle, PADDLE_SIZE);
-        // loops if new paddle position collides with any of the other clients until valid position has been generated                  
-        while(paddle_hit_paddle(paddle, &ball, client_list, client_socket)){
-            new_paddle(&paddle, PADDLE_SIZE);
-        }
-        // adds client to list
-        add_client(&client_list, remote_addr_str, remote_port, paddle, client_socket);
-
-        //sends board_update message to the client
-        send_board_update(sock_fd, client_socket, ball, client_list);
-
-        //create a thread to receive messages from the client 
-        pthread_t listen_to_client_thread_id;
-	    pthread_create(&listen_to_client_thread_id, NULL, listen_to_client_thread, &client_socket);
-    }
-}
-
-
 
 // sends board_update message to all the clients, with the information of all players paddle positions and scores
 void send_board_update(int sock_fd, int client_socket, ball_position_t ball, struct Node* client_list){
@@ -192,17 +166,54 @@ int main()
     printf("Socket created and binded \n");
 	printf("Ready to receive messages \n");
 
-	char buffer[100];
-	int nbytes;
+    struct sockaddr_in client_addr; 
+    socklen_t client_addr_size = sizeof(struct sockaddr_in);
+    int backlog = 10;   // numbe of pending connections
+    int client_socket;  // client socket
 
+    n_clients = 0;
+    client_list = NULL;
 
-    // create thread that receives connection requests from clients
-    pthread_t new_connection_thread_id;
-	pthread_create(&new_connection_thread_id, NULL, new_connection_thread, NULL);
+    pthread_t listen_to_client_thread_id[100];
 	
     while(1){
-        sleep(3);
-        print_list(client_list);    // prints client_list
+        // sleep(3);
+        // print_list(client_list);    // prints client_list
+
+        listen(sock_fd, backlog);       // doesnt block
+        
+        client_socket = accept(sock_fd,(struct sockaddr *)&client_addr, &client_addr_size); // blocks -> use thread! creates new socket; used to read/write to client; original socket available for new connections
+        
+        // might not be needed?
+        char remote_addr_str[100];
+        int remote_port = ntohs(client_addr.sin_port);
+        if (inet_ntop(AF_INET, &client_addr.sin_addr, remote_addr_str, 100) == NULL){
+            perror("converting remote addr: ");
+        }
+        printf("estabilished connection: %s %d:\n", remote_addr_str, remote_port); 
+         
+        if(n_clients == 0){
+            place_ball_random(&ball);   //random initialization of ball position
+            pthread_t ball_thread_id;
+	        pthread_create(&ball_thread_id, NULL, ball_thread, NULL);
+            printf("FDS \n");      
+            
+        }
+        paddle_position_t paddle;
+        // random initialization of paddle position
+        new_paddle(&paddle);
+        // loops if new paddle position collides with any of the other clients until valid position has been generated               
+        while(paddle_hit_paddle(paddle, client_list, client_socket)){ 
+            new_paddle(&paddle);
+        }
+        // adds client to list
+        add_client(&client_list, remote_addr_str, remote_port, paddle, client_socket);
+        //sends board_update message to the client
+        send_board_update(sock_fd, client_socket, ball, client_list);
+        //create a thread to receive messages from the client 
+        
+	    pthread_create(&listen_to_client_thread_id[n_clients], NULL, listen_to_client_thread, &client_socket);
+        n_clients++;
     }
 
 
