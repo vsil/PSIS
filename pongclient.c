@@ -35,18 +35,11 @@ void* keyboard_thread(void* arg){
 
 		/* gets user input */
 		key = wgetch(my_win);
-		// while(!(key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN || key == 'q')){
-		// 	key = wgetch(my_win);	
-		// }
 
 		/* Check the key pressed */
 		if (key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN){
 
-			/* Send Paddle_move message to the server , sizeof(struct message), 0);
-		if (nbytes <= 0)
-            printf("Error receiving the message from the server \n");
-
-		// If a Board_update messag*/
+			// If a Board_update messag*/
 			m.command = PADDLE_MOVE;
 			m.pressed_key = key;
 
@@ -65,8 +58,6 @@ void* keyboard_thread(void* arg){
 			system("clear");
 			exit(0);
 		}
-
-		// key = 0; // resets user key		
 	}
 }
 
@@ -184,15 +175,15 @@ int main(int argc, char *argv[]) {
 		if (nbytes <= 0)
             printf("Error receiving the message from the server \n");
 
+
 		// If a Board_update message is received
 		if(m.command == BOARD_UPDATE){
 
 			draw_ball(my_win, &ball, false);	
 			draw_all_paddles(my_win, Paddle_List, false);	// clears previous round paddles and ball
-
-			ball = m.ball_position;							// updates ball information
+			ball = m.ball_position;
 			n_clients = m.number_clients;
-
+			
 			update_player_positions(sock_fd, &Paddle_List, n_clients);	// receives new paddle positions, updates local Paddle_List
             draw_ball(my_win, &ball, true);			
 			draw_all_paddles(my_win, Paddle_List, true);				// draws new ball and paddle positions

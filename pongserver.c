@@ -101,43 +101,48 @@ void send_board_update(int sock_fd, int client_socket, ball_position_t ball, str
     int nbytes;
     message m;
     paddle_position_message paddle_m;
-
+    struct Node* temp = client_list;
+    struct Node* temp2 = client_list;
     // create general board_update message 
     m.command = BOARD_UPDATE;
     m.ball_position = ball;
     m.number_clients = n_clients;
-
-    // send general board_update message
-    nbytes = send(client_list->client_socket, &m, sizeof(struct message), 0);
-    // Error handling (returns -1 if there is an error)
-    if (nbytes < 0)
-        printf("Error sending the message to the client \n");  
-    
-    // goes through client_list and sends to the client the paddle positions and scores of each player
-    // client builds a paddle list with this data
-    for(int i=0; i< n_clients; i++){
-
-        // send paddle_move message
-        paddle_m.paddle_position = client_list->paddle;
-        paddle_m.player_score = client_list->player_score;
-        paddle_m.current_player = false;
-
-        if(client_list->client_socket==client_socket){
-            paddle_m.current_player = true;
-        }  
-        nbytes = send(client_list->client_socket, &paddle_m, sizeof(struct paddle_position_message), 0);
+  
+    for(int j=0; j< n_clients; j++){
+        // send general board_update message
+        nbytes = send(temp->client_socket, &m, sizeof(struct message), 0);
         // Error handling (returns -1 if there is an error)
         if (nbytes < 0)
-            printf("Error sending the message to the client \n"); 
+            printf("Error sending the message to the client \n");
 
-        client_list = client_list->next;
+        // goes through client_list and sends to the client the paddle positions and scores of each player
+        // client builds a paddle list with this data
+        for(int i=0; i< n_clients; i++){
+            // send paddle_move message
+            paddle_m.paddle_position = temp2->paddle;
+            paddle_m.player_score = temp2->player_score;
+            paddle_m.current_player = false;
+
+            if(temp->client_socket==temp2->client_socket){
+                paddle_m.current_player = true;
+            }  
+            nbytes = send(temp->client_socket, &paddle_m, sizeof(struct paddle_position_message), 0);
+            // Error handling (returns -1 if there is an error)
+            if (nbytes < 0)
+                printf("Error sending the message to the client \n"); 
+
+            temp2 = temp2->next;
+        }
+        temp2 = client_list;
+        temp = temp->next;
     }
+   
 }
 
 int main()
 {
     // Create an internet domain stream socket
-	sock_fd= socket(AF_INET, SOCK_STREAM, 0);
+	sock_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock_fd == -1){
 		perror("socket: ");
 		exit(-1);
@@ -172,9 +177,9 @@ int main()
         // print_list(client_list);    // prints client_list
 
         listen(sock_fd, backlog);       // doesnt block
-        
+        printf("before liste\n"); 
         client_socket = accept(sock_fd,(struct sockaddr *)&client_addr, &client_addr_size); // blocks -> use thread! creates new socket; used to read/write to client; original socket available for new connections
-        
+        printf("after listen\n"); 
         // might not be needed?
         char remote_addr_str[100];
         int remote_port = ntohs(client_addr.sin_port);
@@ -192,18 +197,19 @@ int main()
         }
         paddle_position_t paddle;
         // random initialization of paddle position
-        new_paddle(&paddle);
-        // loops if new paddle position collides with any of the other clients until valid position has been generated               
-        while(paddle_hit_paddle(paddle, client_list, client_socket)){ 
-            new_paddle(&paddle);
-        }
+        do{
+            new_paddle(&paddle);    
+        }while(paddle_hit_paddle(paddle, client_list, client_socket));
+        
         // adds client to list
         add_client(&client_list, remote_addr_str, remote_port, paddle, client_socket);
+        print_list(client_list);    // prints client_list
         //sends board_update message to the client
         send_board_update(sock_fd, client_socket, ball, client_list);
         //create a thread to receive messages from the client 
         
 	    pthread_create(&listen_to_client_thread_id[n_clients], NULL, listen_to_client_thread, &client_socket);
+        printf("THREAD ID: %lu \n",listen_to_client_thread_id[n_clients]);
         n_clients++;
     }
 
