@@ -13,7 +13,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
-#include <time.h>
 
 // Include header files
 #include "client_list.h" 
@@ -35,14 +34,19 @@ void* keyboard_thread(void* arg){
 	while(1){
 
 		/* gets user input */
-		while(!(key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN || key == 'q')){
-			key = wgetch(my_win);	
-		}
+		key = wgetch(my_win);
+		// while(!(key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN || key == 'q')){
+		// 	key = wgetch(my_win);	
+		// }
 
 		/* Check the key pressed */
 		if (key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN){
 
-			/* Send Paddle_move message to the server */
+			/* Send Paddle_move message to the server , sizeof(struct message), 0);
+		if (nbytes <= 0)
+            printf("Error receiving the message from the server \n");
+
+		// If a Board_update messag*/
 			m.command = PADDLE_MOVE;
 			m.pressed_key = key;
 
@@ -53,12 +57,16 @@ void* keyboard_thread(void* arg){
 
 		else if(key == 'q'){
 			/* Send disconnect message to the server, closes socket and exits application */
+			m.command = DISCONNECT;
+			nbytes = send(sock_fd, &m, sizeof(struct message), 0);
+			if (nbytes < 0)
+            	printf("Error sending the message to the server \n");
 			close(sock_fd);
 			system("clear");
 			exit(0);
 		}
 
-		key = 0; // resets user key		
+		// key = 0; // resets user key		
 	}
 }
 
@@ -141,18 +149,6 @@ int main(int argc, char *argv[]) {
 
 	int nbytes;
 	struct message m;
-	// receives general message
-	nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
-	if (nbytes <= 0)
-            printf("Error receiving the message from the server \n");
-	n_clients = m.number_clients;
-	
-	// receives board_update message
-	if(m.command==BOARD_UPDATE){
-		ball = m.ball_position;
-		// receives paddle_position_message and updates local paddle_list with player information
-		update_player_positions(sock_fd, &Paddle_List, n_clients);	 
-	}
 
 	// Curses mode
 	initscr();		    	/* Start curses mode 		*/
@@ -175,7 +171,6 @@ int main(int argc, char *argv[]) {
 	// Prints players scores
 	print_players_score(message_win, Paddle_List, n_clients);
 
-	int key;				// Read from keyboard
 	char clear[] = "                                          ";	// Clear string 	
 
 	// create keyboard thread

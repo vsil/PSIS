@@ -48,7 +48,7 @@ void* ball_thread(void* arg){
 
 
 void* listen_to_client_thread(void* arg){
-    long int client_socket = *(int*) arg;
+    long int client_socket = *(long int*) arg;
     printf("client_socket: %ld \n", client_socket);
     message m;
     int backlog = 10; // ??
@@ -62,13 +62,6 @@ void* listen_to_client_thread(void* arg){
         printf("received %d bytes \n", nbytes);
 
         current_client_socket = client_socket;
-
-        // if (nbytes == 0){
-        //     // removes player from the game; invites player from the waiting list
-        //     printf("disconnection message detected!\n");
-        //     n_clients--;
-        //     delete_client(&client_list, client_socket);  // deletes client entry on client_list    
-        // }
 
         nbytes = 0;
         int pressed_key;  
@@ -114,16 +107,15 @@ void send_board_update(int sock_fd, int client_socket, ball_position_t ball, str
     m.ball_position = ball;
     m.number_clients = n_clients;
 
+    // send general board_update message
+    nbytes = send(client_list->client_socket, &m, sizeof(struct message), 0);
+    // Error handling (returns -1 if there is an error)
+    if (nbytes < 0)
+        printf("Error sending the message to the client \n");  
     
     // goes through client_list and sends to the client the paddle positions and scores of each player
     // client builds a paddle list with this data
-    for(int i=0; i<n_clients; i++){
-
-        // send general board_update message
-        nbytes = send(client_list->client_socket, &m, sizeof(struct message), 0);
-        // Error handling (returns -1 if there is an error)
-        if (nbytes < 0)
-            printf("Error sending the message to the client \n");  
+    for(int i=0; i< n_clients; i++){
 
         // send paddle_move message
         paddle_m.paddle_position = client_list->paddle;
@@ -132,8 +124,7 @@ void send_board_update(int sock_fd, int client_socket, ball_position_t ball, str
 
         if(client_list->client_socket==client_socket){
             paddle_m.current_player = true;
-        }
-
+        }  
         nbytes = send(client_list->client_socket, &paddle_m, sizeof(struct paddle_position_message), 0);
         // Error handling (returns -1 if there is an error)
         if (nbytes < 0)
@@ -169,7 +160,7 @@ int main()
     struct sockaddr_in client_addr; 
     socklen_t client_addr_size = sizeof(struct sockaddr_in);
     int backlog = 10;   // numbe of pending connections
-    int client_socket;  // client socket
+    long int client_socket;  // client socket
 
     n_clients = 0;
     client_list = NULL;

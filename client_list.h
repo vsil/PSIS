@@ -27,8 +27,8 @@ struct Node {
 // A linked list node for player informations (paddle position and score), stored on client
 struct Paddle_Node {
     paddle_position_t paddle;
-    bool current_player;
     int player_score;
+    bool current_player;
     struct Paddle_Node* next;
 };    
 
