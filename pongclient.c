@@ -41,26 +41,31 @@ int h=0;
 void* ball_thread(void* arg){
 	int nbytes;
 	while(1){
-		sleep(1);
+		sleep(3);
 		/* Update ball position */
+		old_ball = ball;
 		draw_ball(my_win, &ball, false);
         moove_ball(&ball);
-        draw_ball(my_win, &ball, true);
-		/* Check if the paddle and the ball collide */
-        draw_ball(my_win, &ball, false);
-        paddle_hit_ball(&ball, &paddle, &old_ball, &old_paddle);
+        // draw_ball(my_win, &ball, true);
+		// /* Check if the paddle and the ball collide */
+        // draw_ball(my_win, &ball, false);
+        // paddle_hit_ball(&ball, &paddle, &old_ball, &old_paddle);
         draw_ball(my_win, &ball, true);
 		/* Redraw the box*/
-		box(my_win, 0 , 0);	
-		wrefresh(message_win);
+		// box(my_win, 0 , 0);	
+		// wrefresh(message_win);
 		pthread_mutex_lock(&lock);
 		m.command = MOVE;
 		m.ball_position = ball;
+		mvwprintw(message_win, 3,1, "send ball position: (%d, %d)", m.ball_position.x, m.ball_position.y);
 		nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
 					(const struct sockaddr *)&server_addr, sizeof(server_addr));
+		mvwprintw(message_win, 4,1, "send ball position: (%d, %d)", m.ball_position.x, m.ball_position.y);
 		if (nbytes < 0)
         		printf("Error sending Move_ball message to the server \n");
 		pthread_mutex_unlock(&lock);
+		box(my_win, 0 , 0);	
+		wrefresh(message_win);
 	}
 }
 
@@ -222,7 +227,7 @@ int main(int argc, char *argv[]) {
 			/* Update ball position */
 			draw_ball(my_win, &ball, false);
 			ball = m.ball_position;
-            moove_ball(&ball);
+            // moove_ball(&ball);
             draw_ball(my_win, &ball, true);
 			wrefresh(message_win);
 		}

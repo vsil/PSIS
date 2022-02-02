@@ -121,7 +121,7 @@ void* player_timer_thread(void* arg){
     
     struct player_address *current_player = arg;
     while(1){
-        sleep(10);
+        sleep(100);
         if (n_clients == 0)
             pthread_exit(NULL);
         else if (n_clients == 1)
@@ -216,6 +216,7 @@ int main()
             case MOVE:
                 printf("move ball message detected!\n");
                 // Send MOVE message
+                printf("received ball position: (%d, %d) \n", m.ball_position.x, m.ball_position.y);
                 send_move_message(sock_fd, &client_list, remote_addr_str, remote_port, m.ball_position);
                 break;
             case DISCONNECT:
