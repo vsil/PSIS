@@ -55,10 +55,16 @@ void* listen_to_client_thread(void* arg){
     int nbytes=0;
     printf("entered listen_to_client_thread\n");
     while(1){
-
-        while(nbytes<=0){
-            nbytes = recv(client_socket, &m, sizeof(struct message), 0);
+        
+        // while(nbytes<=0){
+        nbytes = recv(client_socket, &m, sizeof(struct message), 0);
+        if (nbytes == 0){
+            printf("RECEIVED 0 bytes: client disconnect!!! \n");
+            n_clients--;
+            delete_client(&client_list, client_socket);  // deletes client entry on client_list
         }
+            // printf("RECEIVED BYTES: %d \n", nbytes)
+
         printf("received %d bytes \n", nbytes);
 
         current_client_socket = client_socket;
