@@ -83,7 +83,7 @@ void* recv_msgs_thread(){
 			exit(0);
 		}
 		// If a Move_ball message is received
-		if(m.command == MOVE){
+		if(m.command == MOVE && !play_state){
 			pthread_mutex_lock(&mux_curses);
 			/* Print new messages to the text display*/
 			mvwprintw(message_win, 1,1,"%s",clear);
@@ -111,9 +111,7 @@ void* recv_msgs_thread(){
 
 			play_state = true; 		// Entering play_state
 			// Creates ball thread only on the first SEND message received
-			int t_create;
-			t_create = pthread_create(&thread_ball_id, NULL, ball_thread, NULL); 
-			if (t_create != 0)
+			if (pthread_create(&thread_ball_id, NULL, ball_thread, NULL) != 0)
 				printf("Error creating the ball thread \n");
 		}
 
@@ -121,9 +119,7 @@ void* recv_msgs_thread(){
 		if(m.command == RELEASE){
 			play_state = false; 	// Entering Idle state
 			// Cancel the ball thread - the ball thread is then created in a different client
-			int t_cancel;
-			t_cancel = pthread_cancel(thread_ball_id);
-			if (t_cancel != 0)
+			if (pthread_cancel(thread_ball_id) != 0)
 				printf("Error cancelling the ball thread \n");
 			// Prints
 			pthread_mutex_lock(&mux_curses);
@@ -205,10 +201,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* Creates the thread that receives msgs from the server*/	
-	int t_create;
 	pthread_t thread_recv_msgs_id;
-	t_create = pthread_create(&thread_recv_msgs_id, NULL, recv_msgs_thread, NULL);
-	if (t_create != 0)
+	if (pthread_create(&thread_recv_msgs_id, NULL, recv_msgs_thread, NULL) != 0)
 		printf("Error creating the receive messages thread \n");
 
 	int key; // Variable that stores the character read from the keyboard

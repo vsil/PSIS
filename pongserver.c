@@ -3,6 +3,9 @@
 #include<arpa/inet.h>
 #include<sys/socket.h>
 
+// Include threads library
+#include <pthread.h> 
+
 // General libraries
 #include <stdlib.h>
 #include <stdio.h>
@@ -210,10 +213,8 @@ int main()
                     struct player_address current_player;
                     strcpy(current_player.player_addr_str, remote_addr_str);
                     current_player.player_port = remote_port;
-                    
-                    int t_create;
-                    t_create = pthread_create(&player_timer_thread_id, NULL, player_timer_thread, &current_player);
-                    if (t_create != 0)
+    
+                    if (pthread_create(&player_timer_thread_id, NULL, player_timer_thread, &current_player) != 0)
 		                printf("Error creating the timer thread \n");
                 }
                 break;
@@ -226,9 +227,7 @@ int main()
                 n_clients--;
                 // If there are no players, kill the timer thread
                 if (n_clients == 0){
-                    int t_cancel;
-			        t_cancel = pthread_cancel(player_timer_thread_id);
-			        if (t_cancel != 0)
+			        if (pthread_cancel(player_timer_thread_id) != 0)
 				        printf("Error cancelling the ball thread \n");
                 }
 
