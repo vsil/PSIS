@@ -16,6 +16,12 @@ struct Node {
     struct Node* next;
 };
 
+// Player adress structure
+struct player_address{
+    char player_addr_str[100];
+    int player_port;
+};
+
 // Next player variables
 int next_player_port;
 char next_player_address[100];

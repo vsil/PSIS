@@ -14,7 +14,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
-#include <time.h>
 
 // ncurses library
 #include <ncurses.h>
@@ -24,107 +23,123 @@
 #include "pong.h" 			
 #include "sock_dg_inet.h"
 
-// Global variables
-WINDOW * my_win;
-int sock_fd;
-struct sockaddr_in server_addr;
+
+/* Global variables */		
+int sock_fd;					 // socket file descriptor	
+struct sockaddr_in server_addr;  // server adress
+// ball variables 
 ball_position_t ball;
 ball_position_t old_ball;
+// paddle variables 
 paddle_position_t paddle;
 paddle_position_t old_paddle;
-message m;
-bool play_state;
-pthread_mutex_t lock;
+// mutex declaration
+pthread_mutex_t mux_curses; 
+// play state boolean: true - play state / false - Idle state
+bool play_state;	
 
-int h=0;
 
-void* ball_thread(void* arg){
+void* ball_thread(){
+	message m;
 	int nbytes;
 	while(1){
-		sleep(3);
+		/* Wait 1 second */
+		sleep(1);
 		/* Update ball position */
 		old_ball = ball;
-		draw_ball(my_win, &ball, false);
+		pthread_mutex_lock(&mux_curses);  
+		draw_ball(&ball, false);
         moove_ball(&ball);
-        // draw_ball(my_win, &ball, true);
-		// /* Check if the paddle and the ball collide */
-        // draw_ball(my_win, &ball, false);
-        // paddle_hit_ball(&ball, &paddle, &old_ball, &old_paddle);
-        draw_ball(my_win, &ball, true);
-		/* Redraw the box*/
-		// box(my_win, 0 , 0);	
-		// wrefresh(message_win);
-		pthread_mutex_lock(&lock);
+        paddle_hit_ball(&ball, &paddle, &old_ball, &old_paddle);
+        draw_ball(&ball, true);
+		box(play_win, 0 , 0);	
+		wrefresh(play_win);
+		pthread_mutex_unlock(&mux_curses);  
+
+		/* Create the Move_ball message */
 		m.command = MOVE;
 		m.ball_position = ball;
-		mvwprintw(message_win, 3,1, "send ball position: (%d, %d)", m.ball_position.x, m.ball_position.y);
+		/* Send the Move_ball message to the server */
 		nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
 					(const struct sockaddr *)&server_addr, sizeof(server_addr));
-		mvwprintw(message_win, 4,1, "send ball position: (%d, %d)", m.ball_position.x, m.ball_position.y);
+		// Error handling
 		if (nbytes < 0)
-        		printf("Error sending Move_ball message to the server \n");
-		pthread_mutex_unlock(&lock);
-		box(my_win, 0 , 0);	
-		wrefresh(message_win);
+        	printf("Error sending Move_ball message to the server \n");
 	}
 }
 
-void* keyboard_thread(void* arg){
-	int key;
+void* recv_msgs_thread(){
+	// Wait for a message from the server
+	message m;
 	int nbytes;
+	pthread_t thread_ball_id;
+	/* Clear string */
+	char clear[] = "                                          ";
 	while(1){
-		/* Read key from keyboard */
-		key = wgetch(my_win);
-		if (key == 'q'){
-			pthread_mutex_lock(&lock);
-			/* Send DISCONNECT message to the server */
-			m.command = DISCONNECT;
-			nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
-					(const struct sockaddr *)&server_addr, sizeof(server_addr));
-			// Error handling (returns -1 if there is an error)
-    		if (nbytes < 0)
-        		printf("Error sending the message to the server \n");
-			pthread_mutex_unlock(&lock);	
-			// Closes the socket and terminates the client
-			pthread_mutex_destroy(&lock);
-			close(sock_fd);
-			system("clear");
+		nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
+		// Error handling
+		if (nbytes <= 0){
+			printf("Error receiving the message from the server \n");
 			exit(0);
+		}
+		// If a Move_ball message is received
+		if(m.command == MOVE){
+			pthread_mutex_lock(&mux_curses);
+			/* Print new messages to the text display*/
+			mvwprintw(message_win, 1,1,"%s",clear);
+			mvwprintw(message_win, 1,1,"Idle state");
+			mvwprintw(message_win, 2,1,"%s",clear);
+			mvwprintw(message_win, 3,1,"%s",clear);
+			/* Update ball position */
+			draw_ball(&ball, false);
+			ball = m.ball_position;
+			// moove_ball(&ball);
+			draw_ball(&ball, true);
+			wrefresh(message_win);
+			pthread_mutex_unlock(&mux_curses);
+		}
+		// If a Send_ball message is received
+		if(m.command == SEND){
+			// Prints
+			pthread_mutex_lock(&mux_curses);
+			mvwprintw(message_win, 1,1,"%s",clear);
+			mvwprintw(message_win, 1,1,"Play state");
+			mvwprintw(message_win, 2,1,"You can control the paddle: ");
+			mvwprintw(message_win, 3,1,"%s",clear);
+			wrefresh(message_win);
+			pthread_mutex_unlock(&mux_curses);
 
+			play_state = true; 		// Entering play_state
+			// Creates ball thread only on the first SEND message received
+			int t_create;
+			t_create = pthread_create(&thread_ball_id, NULL, ball_thread, NULL); 
+			if (t_create != 0)
+				printf("Error creating the ball thread \n");
 		}
-		/* Check the key pressed */
-       	if ((key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN) && play_state){
-			/* Store old positions */
-			old_paddle = paddle;
-			old_ball = ball;
-			/* Update paddle */
-            draw_paddle(my_win, &paddle, false);
-           	moove_paddle (&paddle, key);
-            draw_paddle(my_win, &paddle, true);
-			/* Check if the paddle and the ball collide */
-			draw_ball(my_win, &ball, false);
-			paddle_hit_ball(&ball, &paddle, &old_ball, &old_paddle);
-			draw_ball(my_win, &ball, true);
-			pthread_mutex_lock(&lock);
-			m.command = MOVE;
-			m.ball_position = ball;
-			nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
-					(const struct sockaddr *)&server_addr, sizeof(server_addr));
-			if (nbytes < 0)
-        		printf("Error sending Move_ball message to the server \n");
-			pthread_mutex_unlock(&lock);
+
+		// If a Release message is received
+		if(m.command == RELEASE){
+			play_state = false; 	// Entering Idle state
+			// Cancel the ball thread - the ball thread is then created in a different client
+			int t_cancel;
+			t_cancel = pthread_cancel(thread_ball_id);
+			if (t_cancel != 0)
+				printf("Error cancelling the ball thread \n");
+			// Prints
+			pthread_mutex_lock(&mux_curses);
+			mvwprintw(message_win, 1,1,"%s",clear);
+			mvwprintw(message_win, 1,1,"Idle State");
+			mvwprintw(message_win, 2,1,clear);
+			wrefresh(message_win);
+			pthread_mutex_unlock(&mux_curses);
 		}
-		mvwprintw(message_win, 2,29,"%c key pressed", key);
-		/* Redraw the box*/
-		box(my_win, 0 , 0);	
-        wrefresh(message_win);
 	}
+
 }
 
 int main(int argc, char *argv[]) {
  
 	// Create an internet domain datagram socket (ipv4)
-	// int sock_fd;
 	sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
 	// Error handling
 	if (sock_fd == -1){
@@ -142,7 +157,6 @@ int main(int argc, char *argv[]) {
 		strcpy(buff, argv[1]);
 
 	/* Server adress */
-	// struct sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(SOCK_PORT);
 	if( inet_pton(AF_INET, buff, &server_addr.sin_addr) < 1){
@@ -151,6 +165,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Send connection message
+	message m;
 	m.command = CONNECT;
 	int nbytes;
 	nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
@@ -159,107 +174,90 @@ int main(int argc, char *argv[]) {
     if (nbytes < 0)
         printf("Error sending the message to the server \n");
 
-	// Curses mode
 	initscr();		    	/* Start curses mode 		*/
 	cbreak();				/* Line buffering disabled	*/
     keypad(stdscr, TRUE);   /* We get F1, F2 etc..		*/
 	noecho();			    /* Don't echo() while we do getch */
 
     /* creates a window and draws a border */
-    // WINDOW * my_win = newwin(WINDOW_SIZE, WINDOW_SIZE, 0, 0);
-	my_win = newwin(WINDOW_SIZE, WINDOW_SIZE, 0, 0);
-    box(my_win, 0 , 0);	
-	wrefresh(my_win);
-    keypad(my_win, true);
+	play_win = newwin(WINDOW_SIZE, WINDOW_SIZE, 0, 0);
+    box(play_win, 0 , 0);	
+	wrefresh(play_win);
+    keypad(play_win, true);
     /* creates a window and draws a border */
     message_win = newwin(5, WINDOW_SIZE+10, WINDOW_SIZE, 0);
     box(message_win, 0 , 0);	
 	wrefresh(message_win);
 
-	// Create and draw a paddle
+	/* Creates and draws a paddle */
     new_paddle(&paddle, PADDLE_SIZE);
-    draw_paddle(my_win, &paddle, true);
+    draw_paddle(&paddle, true);
 
-	// Create and draw a ball
+	/* Creates and draws a ball */
     place_ball_random(&ball);
-    draw_ball(my_win, &ball, true);
+    draw_ball(&ball, true);
 
 	play_state = false; 		// Initialize play_state boolean
 
-	// /* Clock variables */
-	// time_t begin; 
-	// double time_spent;
-
-	/* Clear string */
-	char clear[] = "                                          ";
-
-	if (pthread_mutex_init (&lock, NULL) != 0){
+	/* Mutex initialization */
+	if (pthread_mutex_init (&mux_curses, NULL) != 0){
 		printf("\n Mutex init has failed \n");
 	}
-		
-	pthread_t thread_keyboard_id;
-	pthread_create(&thread_keyboard_id, NULL, keyboard_thread, NULL);
 
-	command_t recv_commd;
+	/* Creates the thread that receives msgs from the server*/	
+	int t_create;
+	pthread_t thread_recv_msgs_id;
+	t_create = pthread_create(&thread_recv_msgs_id, NULL, recv_msgs_thread, NULL);
+	if (t_create != 0)
+		printf("Error creating the receive messages thread \n");
 
-	pthread_t thread_ball_id;
+	int key; // Variable that stores the character read from the keyboard
 
 	while(1){
-
-		// Wait for a message from the server
-		nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
-		pthread_mutex_lock(&lock);
-		// Error handling
-		if (nbytes == 0)
-            printf("000000000000000000000000000SSIJDENWJENWIJDVH \n");
-		if (nbytes < 0)
-            printf("Error receiving the message from the server \n");
-		recv_commd = m.command;	
-		pthread_mutex_unlock(&lock);
-
-		// If a Move_ball message is received
-		if(recv_commd == MOVE){
-			/* Print new messages to the text display*/
-			mvwprintw(message_win, 1,1,"%s",clear);
-			mvwprintw(message_win, 1,1,"WAITING STATE");
-			mvwprintw(message_win, 2,1,"%s",clear);
-			mvwprintw(message_win, 3,1,"%s",clear);
-			/* Update ball position */
-			draw_ball(my_win, &ball, false);
-			ball = m.ball_position;
-            // moove_ball(&ball);
-            draw_ball(my_win, &ball, true);
-			wrefresh(message_win);
+		/* Read key from keyboard */
+		key = wgetch(play_win);
+		if (key == 'q'){
+			/* Send DISCONNECT message to the server */
+			m.command = DISCONNECT;
+			nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
+					(const struct sockaddr *)&server_addr, sizeof(server_addr));
+			// Error handling (returns -1 if there is an error)
+    		if (nbytes < 0)
+        		printf("Error sending the message to the server \n");	
+			// Exits the client (automatically destroys the threads)
+			system("clear");
+			exit(0);
 		}
-		// If a Send_ball message is received
-		if(recv_commd == SEND){
-			play_state = true; 		// Entering play_state
-			
-			if (h == 0){			
-				pthread_create(&thread_ball_id, NULL, ball_thread, NULL);  // creates ball thread only on the first SEND message received
-			}
-			h++;
-			mvwprintw(message_win, 1,1,"%s",clear);
-			mvwprintw(message_win, 1,1,"PLAY STATE");
-			mvwprintw(message_win, 2,1,"You can control the paddle: ");
-			mvwprintw(message_win, 4,1, "%d", h);
-			wrefresh(message_win);
-		}
+		/* Check the key pressed */
+       	if ((key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN) && play_state){
+			/* Store old positions */
+			old_paddle = paddle;
+			old_ball = ball;
+			pthread_mutex_lock(&mux_curses);  
+			/* Update paddle */
+            draw_paddle(&paddle, false);
+           	moove_paddle (&paddle, key);
+            draw_paddle(&paddle, true);
+			/* Check if the paddle and the ball collide */
+			draw_ball(&ball, false);
+			paddle_hit_ball(&ball, &paddle, &old_ball, &old_paddle);
+			draw_ball(&ball, true);
+			pthread_mutex_unlock(&mux_curses);  
 
-		// If a Release message is received
-		if(recv_commd == RELEASE){
-			play_state = false; 		// entering waiting_state
-			h=0;
-			pthread_cancel(thread_ball_id);
-			mvwprintw(message_win, 1,1,"%s",clear);
-			mvwprintw(message_win, 1,1,"WAITING STATE");
-			mvwprintw(message_win, 2,1,clear);
-			mvwprintw(message_win, 4,1, "%d", h);
-			wrefresh(message_win);
+			/* Create the Move_ball message */
+			m.command = MOVE;
+			m.ball_position = ball;
+			/* Send the Move_ball message to the server */
+			nbytes = sendto(sock_fd, &m, sizeof(struct message), 0, 
+						(const struct sockaddr *)&server_addr, sizeof(server_addr));
+			if (nbytes < 0)
+        		printf("Error sending Move_ball message to the server \n");
 		}
+		pthread_mutex_lock(&mux_curses);  
+		mvwprintw(message_win, 2,29,"%c key pressed", key);
+		/* Redraw the box*/
+		box(play_win, 0 , 0);	
+        wrefresh(play_win);
+		pthread_mutex_unlock(&mux_curses);  
 	}
-	// Closes the socket and terminates the client
-	close(sock_fd);
-	system("clear");
-	exit(0);
 }

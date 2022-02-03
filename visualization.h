@@ -8,7 +8,9 @@
 #define WINDOW_SIZE 35
 #define PADDLE_SIZE 3
 
-WINDOW * message_win;
+// Windows - global variables
+WINDOW * play_win;          // Play window
+WINDOW * message_win;       // Text window
 
 /* Ball position structure */
 typedef struct ball_position_t{
@@ -27,10 +29,10 @@ typedef struct paddle_position_t{
 /* Functions */
 void new_paddle (paddle_position_t * paddle, int legth);
 void moove_paddle (paddle_position_t * paddle, int direction);
-void draw_paddle(WINDOW *win, paddle_position_t * paddle, int del);
+void draw_paddle(paddle_position_t * paddle, int del);
 void place_ball_random(ball_position_t * ball);
 void moove_ball(ball_position_t * ball);
-void draw_ball(WINDOW *win, ball_position_t * ball, int draw);
+void draw_ball(ball_position_t * ball, int draw);
 void paddle_hit_ball(ball_position_t * ball, paddle_position_t * paddle, 
     ball_position_t * old_ball, paddle_position_t * old_paddle);
 

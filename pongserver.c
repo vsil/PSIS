@@ -17,23 +17,16 @@
 #include "sock_dg_inet.h"
 
 // Global variables
-int n_clients;
-int sock_fd;
-struct Node* client_list;
+int sock_fd;                // socket file descriptor	
+int n_clients;              // number of active clients
+struct Node* client_list;   // client linked list
 
-struct player_address{
-    char player_addr_str[100];
-    int player_port;
-};
 
 // Create a function to send a PLAY command to a client
 void send_play_message(int sock_fd, char addr[], int port){
 
-    int nbytes;
-    message m;
     struct sockaddr_in player_addr;
     socklen_t player_addr_size = sizeof(struct sockaddr_in);  
-
     player_addr.sin_family = AF_INET;    // INET domain (ipv4)
     player_addr.sin_port = htons(port);  // translates the port to network byte order
     // Player address converted to binary + error handling
@@ -42,8 +35,11 @@ void send_play_message(int sock_fd, char addr[], int port){
         exit(-1);
     }
 
+    // Create a Send_ball message
+    message m;
     m.command = SEND;
     // Send the message
+    int nbytes;
     nbytes = sendto(sock_fd, &m, sizeof(struct message), 0,
                 (const struct sockaddr *) &player_addr, player_addr_size);
     // Error handling (returns -1 if there is an error)
@@ -54,11 +50,8 @@ void send_play_message(int sock_fd, char addr[], int port){
 
 void send_release_message(int sock_fd, char addr[], int port){
 
-    int nbytes;
-    message m;
     struct sockaddr_in player_addr;
     socklen_t player_addr_size = sizeof(struct sockaddr_in);  
-
     player_addr.sin_family = AF_INET;    // INET domain (ipv4)
     player_addr.sin_port = htons(port);  // translates the port to network byte order
     // Player address converted to binary + error handling
@@ -67,8 +60,11 @@ void send_release_message(int sock_fd, char addr[], int port){
         exit(-1);
     }
 
+    // Create a Release_ball message
+    message m;
     m.command = RELEASE;
     // Send the message
+    int nbytes;
     nbytes = sendto(sock_fd, &m, sizeof(struct message), 0,
                 (const struct sockaddr *) &player_addr, player_addr_size);
     // Error handling (returns -1 if there is an error)
@@ -81,19 +77,19 @@ void send_release_message(int sock_fd, char addr[], int port){
 // Create a function to send a MOVE command to a client as well as the updated ball position
 void send_move_message(int sock_fd, struct Node** head_ref, char player_address[], int player_port, ball_position_t ball){
 
-    int nbytes;
-    message m;
     struct sockaddr_in player_addr;
     socklen_t player_addr_size = sizeof(struct sockaddr_in);  
 
     // Message to be sent
+    message m;
     m.command = MOVE;
     m.ball_position = ball;
+    int nbytes;
 
     // Store head node
     struct Node *temp = *head_ref;
 
-    // Run through the client list
+    // Runs through the client list
     // Send the message to all the clients in the list (except the active one)
     while (temp != NULL){
         if(!(temp->port==player_port && strcmp(temp->address, player_address)==0)){
@@ -115,18 +111,22 @@ void send_move_message(int sock_fd, struct Node** head_ref, char player_address[
     }
 }
 
-void* player_timer_thread(void* arg){
-	/* Send the ball to the next player;
-        if there is only one player, send the ball to that player */
+void* player_timer_thread(void* player){
     
-    struct player_address *current_player = arg;
+    struct player_address *current_player = player;
+
     while(1){
-        sleep(100);
-        if (n_clients == 0)
-            pthread_exit(NULL);
-        else if (n_clients == 1)
+        // Waits 10 seconds
+        printf("Couting 10 seconds...\n");
+        sleep(10);
+        printf("10 seconds have passed...\n");
+        /* Send the ball to the next player;
+            if there is only one player, send the ball to that player */
+        if (n_clients == 1)
             send_play_message(sock_fd, current_player->player_addr_str, current_player->player_port);
         else{
+            /* If there is more than one player, sends a release message to the current player,
+                and then, sends a play message to the next player on the list */
             if (next_player(&client_list, current_player->player_addr_str, current_player->player_port)){
                 send_release_message(sock_fd, current_player->player_addr_str, current_player->player_port);
                 send_play_message(sock_fd, next_player_address, next_player_port);
@@ -140,7 +140,6 @@ void* player_timer_thread(void* arg){
 int main()
 {
     // // Create an internet domain datagram socket (ipv4)
-	// int sock_fd;
 	sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
     // Error handling
 	if (sock_fd == -1){
@@ -168,13 +167,12 @@ int main()
 	printf("Ready to receive messages \n");
 
     // Variables initialization
-    client_list = NULL;
-	char buffer[100];
-	int nbytes;
-	message m;
-    bool game_start = true;
     n_clients = 0;
+    client_list = NULL;
+	message m;
+    int nbytes;
 
+    // Client adress structure
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_size = sizeof(struct sockaddr_in);
 
@@ -194,44 +192,58 @@ int main()
 			perror("converting remote addr: ");
 		}
         printf("received %d bytes from %s %d:\n", nbytes, remote_addr_str, remote_port);
+        pthread_t player_timer_thread_id;
         switch(m.command){
             case CONNECT:
                 n_clients++;
                 printf("connection message detected!\n");
 			    // Add client to the list
 			    add_client(&client_list, remote_addr_str, remote_port);
+                // Print the client list
+                print_list(client_list);
                 if(n_clients == 1){
                     // The first player joining the server receives the ball
                     // Send play_message to the player
                     send_play_message(sock_fd, remote_addr_str, remote_port);
 
+                    // Start timer thread
                     struct player_address current_player;
                     strcpy(current_player.player_addr_str, remote_addr_str);
                     current_player.player_port = remote_port;
                     
-                    pthread_t player_timer_thread_id;
-                    pthread_create(&player_timer_thread_id, NULL, player_timer_thread, &current_player);
+                    int t_create;
+                    t_create = pthread_create(&player_timer_thread_id, NULL, player_timer_thread, &current_player);
+                    if (t_create != 0)
+		                printf("Error creating the timer thread \n");
                 }
                 break;
             case MOVE:
                 printf("move ball message detected!\n");
-                // Send MOVE message
-                printf("received ball position: (%d, %d) \n", m.ball_position.x, m.ball_position.y);
+                // Send Move_ball message
                 send_move_message(sock_fd, &client_list, remote_addr_str, remote_port, m.ball_position);
                 break;
             case DISCONNECT:
                 n_clients--;
+                // If there are no players, kill the timer thread
+                if (n_clients == 0){
+                    int t_cancel;
+			        t_cancel = pthread_cancel(player_timer_thread_id);
+			        if (t_cancel != 0)
+				        printf("Error cancelling the ball thread \n");
+                }
+
                 printf("disconnection message detected!\n");     
                 printf("deleting player %s with port: %d \n", remote_addr_str, remote_port);
                 // Delete client from the client list
 		        delete_client(&client_list, remote_addr_str, remote_port);
+                // Print the client list
+                print_list(client_list);
                 /* Sends the ball to the next player, 
                 in case there is any player in the client list */
 				if (next_player(&client_list, remote_addr_str, remote_port))
-							send_play_message(sock_fd, next_player_address, next_player_port);
+					send_play_message(sock_fd, next_player_address, next_player_port);
                 break;
         }
-		print_list(client_list);
     }
     // Closes the socket and terminates the server
     close(sock_fd);
