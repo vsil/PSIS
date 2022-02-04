@@ -180,8 +180,6 @@ void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, bool del){
     }
 }
 
-
-
 // check if new paddle position coincides with any of other players paddle or with the ball position
 // returns true if overlap is detected, returns false otherwise (valid position in this case)
 bool paddle_hit_paddle(paddle_position_t new_paddle_position, struct Node* client_list, int client_socket){
@@ -222,7 +220,7 @@ bool paddle_hit_paddle(paddle_position_t new_paddle_position, struct Node* clien
 }
 
 // updates the ball movement when it is hit by the paddle; updates player score
-paddle_hit_ball(ball_position_t * ball, struct Node ** client_list, ball_position_t * previous_ball){
+void paddle_hit_ball(ball_position_t * ball, struct Node ** client_list, ball_position_t * previous_ball){
     
     struct Node *temp = *client_list;
     paddle_position_t paddle;

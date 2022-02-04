@@ -2,7 +2,7 @@
 #define PONG_H
 
 /* List of commands */
-typedef enum command_t {CONNECT, BOARD_UPDATE, PADDLE_MOVE, DISCONNECT, WAIT_LIST} command_t;
+typedef enum command_t {BOARD_UPDATE, PADDLE_MOVE} command_t;
 
 /* General Message definition */
 typedef struct message

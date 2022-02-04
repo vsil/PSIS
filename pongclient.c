@@ -23,40 +23,47 @@
 // Global variables
 int sock_fd;
 WINDOW * my_win;
+pthread_mutex_t mux_curses; // mutex declaration
 
-void* keyboard_thread(void* arg){
+// Functions prototypes
+void* thread_receive_message(void* arg);
+void update_player_positions(int sock_fd, struct Paddle_Node** paddle_list, int n_clients);
+void print_players_score(WINDOW * message_win, struct Paddle_Node* client_list, int n_clients);
 
+// Thread that receives messages from the server and processes them accordingly
+void* thread_receive_message(void* arg){
+
+	int n_clients;
+	ball_position_t ball;
+	struct Paddle_Node* Paddle_List = NULL; 
 	int nbytes;
-	int key;				// Read from keyboard
-	char clear[] = "                                          ";	// Clear string 	
 	struct message m;
-	
+
 	while(1){
-
-		/* gets user input */
-		key = wgetch(my_win);
-
-		/* Check the key pressed */
-		if (key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN){
-
-			// If a Board_update messag*/
-			m.command = PADDLE_MOVE;
-			m.pressed_key = key;
-
-			nbytes = send(sock_fd, &m, sizeof(struct message), 0);
-			if (nbytes < 0)
-            	printf("Error sending the message to the server \n"); 
+		// Waits for a message
+		nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
+		if (nbytes <= 0){
+			system("clear");
+            printf("Error receiving the message from the server (server might be full) \n");
+			close(sock_fd);
+			exit(0);
 		}
 
-		else if(key == 'q'){
-			// /* Send disconnect message to the server, closes socket and exits application */
-			// m.command = DISCONNECT;
-			// nbytes = send(sock_fd, &m, sizeof(struct message), 0);
-			// if (nbytes < 0)
-            // 	printf("Error sending the message to the server \n");
-			close(sock_fd);
-			system("clear");
-			exit(0);
+		// If a Board_update message is received
+		if(m.command == BOARD_UPDATE){
+
+			pthread_mutex_lock(&mux_curses); 
+			draw_ball(my_win, &ball, false);	
+			draw_all_paddles(my_win, Paddle_List, false);	// clears previous round paddles and ball
+			n_clients = m.number_clients;
+			ball = m.ball_position;
+			update_player_positions(sock_fd, &Paddle_List, n_clients);	// receives new paddle positions, updates local Paddle_List
+            draw_ball(my_win, &ball, true);			
+			draw_all_paddles(my_win, Paddle_List, true);				// draws new ball and paddle positions
+			print_players_score(message_win, Paddle_List, n_clients);	// prints players score on the message window
+			box(my_win, 0 , 0);		/* Redraw the box*/
+			wrefresh(my_win);
+			pthread_mutex_unlock(&mux_curses); 
 		}
 	}
 }
@@ -133,13 +140,10 @@ int main(int argc, char *argv[]) {
 
 	// send connection request
 	connect(sock_fd, (const struct sockaddr *)&server_addr, sizeof(server_addr));
-	
-	int n_clients;
-	ball_position_t ball;
-	struct Paddle_Node* Paddle_List = NULL; 
 
-	int nbytes;
-	struct message m;
+	/* Mutex initialization */
+	if (pthread_mutex_init (&mux_curses, NULL) != 0)
+		printf("\n Mutex init has failed \n");
 
 	// Curses mode
 	initscr();		    	/* Start curses mode 		*/
@@ -147,54 +151,45 @@ int main(int argc, char *argv[]) {
     keypad(stdscr, TRUE);   /* We get F1, F2 etc..		*/
 	noecho();			    /* Don't echo() while we do getch */
 
+	pthread_mutex_lock(&mux_curses); 
     /* creates a window and draws a border */
     my_win = newwin(WINDOW_SIZE, WINDOW_SIZE, 0, 0);
     box(my_win, 0 , 0);	
 	wrefresh(my_win);
+	pthread_mutex_unlock(&mux_curses); 
     keypad(my_win, true);
 
-	// Draw the paddles
-	draw_all_paddles(my_win, Paddle_List, true);
-
-	// Draw the ball 
-    draw_ball(my_win, &ball, true);
-
-	// Prints players scores
-	print_players_score(message_win, Paddle_List, n_clients);
-
+	// create thread to receive messages from the server
+	pthread_t thread_receive_message_id;
+	if (pthread_create(&thread_receive_message_id, NULL, thread_receive_message, NULL) != 0)
+        printf("Error creating the receive messages thread \n");
+	
+	int key;				// Read from keyboard
 	char clear[] = "                                          ";	// Clear string 	
-
-	// create keyboard thread
-	pthread_t thread_keyboard_id;
-	pthread_create(&thread_keyboard_id, NULL, keyboard_thread, NULL);
+	struct message m;
+	int nbytes;
 
 	while(1){
 
-		// Waits for a message
-		nbytes = recv(sock_fd, &m, sizeof(struct message), 0);
-		if (nbytes <= 0)
-            printf("Error receiving the message from the server \n");
+		/* gets user input */
+		key = wgetch(my_win);
 
+		/* Check the key pressed */
+		if (key == KEY_LEFT || key == KEY_RIGHT || key == KEY_UP || key == KEY_DOWN){
 
-		// If a Board_update message is received
-		if(m.command == BOARD_UPDATE){
+			// Prepare and end a Paddle_Move messag*/
+			m.command = PADDLE_MOVE;
+			m.pressed_key = key;
 
-			draw_ball(my_win, &ball, false);	
-			draw_all_paddles(my_win, Paddle_List, false);	// clears previous round paddles and ball
-			ball = m.ball_position;
-			n_clients = m.number_clients;
-			
-			update_player_positions(sock_fd, &Paddle_List, n_clients);	// receives new paddle positions, updates local Paddle_List
-            draw_ball(my_win, &ball, true);			
-			draw_all_paddles(my_win, Paddle_List, true);				// draws new ball and paddle positions
-			print_players_score(message_win, Paddle_List, n_clients);	// prints players score on the message window
+			nbytes = send(sock_fd, &m, sizeof(struct message), 0);
+			if (nbytes < 0)
+            	printf("Error sending the message to the server \n"); 
+		}
 
-			/* Redraw the box*/
-			box(my_win, 0 , 0);	
-			wrefresh(my_win);
+		else if(key == 'q'){
+			close(sock_fd);
+			system("clear");
+			exit(0);
 		}
 	}
-	close(sock_fd);
-	system("clear");
-	exit(0);
 }

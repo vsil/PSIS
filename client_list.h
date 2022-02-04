@@ -11,7 +11,7 @@
 // Header files
 #include "visualization.h"
 
-#define MAX_CLIENTS 2
+#define MAX_CLIENTS 10
 
 // A linked list node, stored on server
 struct Node {
@@ -47,6 +47,6 @@ void update_paddle(struct Node** client_list, int client_socket, int key);
 void reset_list(struct Paddle_Node** head_ref);
 void draw_all_paddles(WINDOW *win, struct Paddle_Node* paddle_list, bool del);
 bool paddle_hit_paddle(paddle_position_t new_paddle_position,struct Node* client_list, int client_socket);
-paddle_hit_ball(ball_position_t * ball, struct Node ** client_list, ball_position_t * previous_ball);
+void paddle_hit_ball(ball_position_t * ball, struct Node ** client_list, ball_position_t * previous_ball);
 
 #endif
